@@ -1,0 +1,3377 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Orange - Expense Tracker</title>
+    <script src="https://unpkg.com/react@18/umd/react.development.js"></script>
+    <script src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.8.1/font/bootstrap-icons.css">
+    
+    <!-- Firebase SDK -->
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/9.22.1/firebase-firestore-compat.js"></script>
+    
+    <!-- Include credentials file -->
+    <script src="data.js"></script>
+    
+    <style>
+        body {
+            background-color: #6c757d;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-size: 14px;
+        }
+        .header {
+            background: linear-gradient(135deg, #ff7f00, #ffaa33);
+            color: white;
+            padding: 1rem 0;
+            margin-bottom: 1rem;
+            border-radius: 0 0 10px 10px;
+        }
+        .card {
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            margin-bottom: 15px;
+            border: none;
+        }
+        .card-header {
+            background-color: #ff7f00;
+            color: white;
+            border-radius: 10px 10px 0 0 !important;
+            padding: 0.75rem 1rem;
+        }
+        .btn-primary {
+            background-color: #ff7f00;
+            border-color: #cc6600;
+            font-size: 0.9rem;
+        }
+        .btn-success {
+            background-color: #28a745;
+            border-color: #1e7e34;
+            font-size: 0.9rem;
+        }
+        .table-hover tbody tr:hover {
+            background-color: rgba(255, 127, 0, 0.1);
+        }
+        .rupee-icon {
+            font-family: Arial, sans-serif;
+            font-weight: bold;
+        }
+        .search-section {
+            background-color: #e9ecef;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .download-btn {
+            margin-bottom: 15px;
+        }
+        .analysis-chart {
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        .dropdown-menu {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .expense-breakdown {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-top: 15px;
+        }
+        .comparison-chart {
+            height: 250px;
+            margin-top: 15px;
+        }
+        .period-selector {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+        }
+        .highlighted-item {
+            background-color: #fff3cd !important;
+            border-left: 4px solid #ff7f00 !important;
+        }
+        .login-container {
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: linear-gradient(135deg, #ff7f00, #ffaa33);
+            padding: 15px;
+        }
+        .login-card {
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+        }
+        .user-badge {
+            position: static;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .approval-badge {
+            position: static;
+            text-align: center;
+            margin-bottom: 10px;
+        }
+        .entry-status {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+        }
+        .status-pending {
+            background-color: #fff3cd;
+            color: #856404;
+        }
+        .status-approved {
+            background-color: #d1ecf1;
+            color: #0c5460;
+        }
+        .role-indicator {
+            font-size: 0.75rem;
+            padding: 2px 6px;
+            border-radius: 10px;
+            background-color: #e9ecef;
+            color: #495057;
+        }
+        .sync-status {
+            position: fixed;
+            bottom: 10px;
+            right: 10px;
+            z-index: 1000;
+            font-size: 0.8rem;
+        }
+        .real-time-badge {
+            animation: pulse 2s infinite;
+        }
+        @keyframes pulse {
+            0% { opacity: 1; }
+            50% { opacity: 0.5; }
+            100% { opacity: 1; }
+        }
+        .debug-panel {
+            background: #f8f9fa;
+            border-left: 4px solid #dc3545;
+            padding: 8px;
+            margin: 8px 0;
+            font-size: 0.75rem;
+        }
+        .pdf-template {
+            display: none;
+        }
+        .report-pdf-content {
+            font-family: Arial, sans-serif;
+            padding: 10px;
+            background: white;
+            color: black;
+            font-size: 10px;
+            line-height: 1.2;
+        }
+        .report-header {
+            text-align: center;
+            border-bottom: 2px solid #ff7f00;
+            padding-bottom: 8px;
+            margin-bottom: 10px;
+        }
+        .report-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-bottom: 2px;
+        }
+        .report-subtitle {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 3px;
+        }
+        .report-summary {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 10px;
+            padding: 8px;
+            background: #f8f9fa;
+            border-radius: 5px;
+            font-size: 10px;
+        }
+        .summary-item {
+            text-align: center;
+            padding: 3px;
+        }
+        .summary-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #ff7f00;
+        }
+        .summary-label {
+            font-size: 9px;
+            color: #666;
+        }
+        .report-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 10px;
+            font-size: 8px;
+        }
+        .report-table th {
+            background-color: #ff7f00;
+            color: white;
+            padding: 4px 3px;
+            text-align: left;
+            border: 1px solid #ddd;
+            font-size: 7px;
+            font-weight: bold;
+        }
+        .report-table td {
+            padding: 3px 2px;
+            border: 1px solid #ddd;
+            font-size: 7px;
+            word-wrap: break-word;
+        }
+        .report-table tr:nth-child(even) {
+            background-color: #f8f9fa;
+        }
+        .total-amount {
+            font-size: 12px;
+            font-weight: bold;
+            color: #ff7f00;
+        }
+        .mobile-optimized-table {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .mobile-optimized-table table {
+            min-width: 100%;
+        }
+        .pdf-preview-modal .modal-dialog {
+            max-width: 95%;
+            margin: 5px auto;
+        }
+        .pdf-preview-modal .modal-body {
+            padding: 5px;
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .download-options {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+        }
+        .outlet-specific-badge {
+            background: linear-gradient(135deg, #ff7f00, #ffaa33);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 12px;
+            font-size: 0.65rem;
+            font-weight: bold;
+        }
+        .approval-section {
+            border-left: 4px solid #28a745;
+            background-color: #f8fff8;
+            padding: 10px;
+            margin: 10px 0;
+            border-radius: 0 8px 8px 0;
+        }
+        .accordion-button:not(.collapsed) {
+            background-color: #ff7f00;
+            color: white;
+            font-size: 0.9rem;
+        }
+        .accordion-button:focus {
+            box-shadow: 0 0 0 0.25rem rgba(255, 127, 0, 0.25);
+        }
+        .category-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 0;
+            border-bottom: 1px solid #eee;
+        }
+        .category-item:last-child {
+            border-bottom: none;
+        }
+        .category-name {
+            font-weight: 500;
+            font-size: 0.85rem;
+        }
+        .category-controls {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        .category-price-input {
+            width: 100px;
+        }
+        .category-qty-input {
+            width: 80px;
+        }
+        .past-date-selector {
+            background-color: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .past-entry-info {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0d6efd;
+            padding: 8px 10px;
+            margin-bottom: 10px;
+            border-radius: 0 5px 5px 0;
+        }
+        .custom-period-selector {
+            background-color: #e7f3ff;
+            border-left: 4px solid #0dcaf0;
+            padding: 10px;
+            border-radius: 0 8px 8px 0;
+            margin: 10px 0;
+        }
+        
+        @media (max-width: 768px) {
+            .container-fluid {
+                padding-left: 10px;
+                padding-right: 10px;
+            }
+            
+            .header h1 {
+                font-size: 1.5rem;
+            }
+            
+            .header .lead {
+                font-size: 1rem;
+            }
+            
+            .outlet-switcher .d-flex {
+                flex-direction: column;
+                gap: 10px;
+            }
+            
+            .outlet-switcher .btn {
+                width: 100%;
+            }
+            
+            .card-body {
+                padding: 1rem;
+            }
+            
+            .table-responsive {
+                font-size: 0.8rem;
+            }
+            
+            .btn {
+                padding: 0.375rem 0.75rem;
+                font-size: 0.875rem;
+            }
+            
+            .form-control, .form-select {
+                font-size: 0.875rem;
+                padding: 0.375rem 0.75rem;
+            }
+            
+            .accordion-body {
+                padding: 1rem;
+            }
+            
+            .category-controls {
+                flex-direction: column;
+                gap: 5px;
+            }
+            
+            .category-price-input,
+            .category-qty-input {
+                width: 100%;
+            }
+            
+            .report-pdf-content {
+                padding: 8px;
+                font-size: 8px;
+            }
+            
+            .report-table {
+                font-size: 7px;
+            }
+            
+            .report-table th,
+            .report-table td {
+                padding: 2px 1px;
+                font-size: 7px;
+            }
+            
+            .report-summary {
+                grid-template-columns: 1fr;
+                gap: 5px;
+            }
+            
+            .summary-value {
+                font-size: 12px;
+            }
+            
+            .modal-dialog {
+                margin: 10px;
+            }
+            
+            .modal-content {
+                border-radius: 0.5rem;
+            }
+            
+            .chart-container {
+                height: 250px;
+            }
+            
+            .comparison-chart {
+                height: 200px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            body {
+                font-size: 13px;
+            }
+            
+            .header {
+                padding: 0.75rem 0;
+            }
+            
+            .header h1 {
+                font-size: 1.25rem;
+            }
+            
+            .card-header h5 {
+                font-size: 1rem;
+            }
+            
+            .btn-lg {
+                padding: 0.5rem 1rem;
+                font-size: 0.9rem;
+            }
+            
+            .table th, .table td {
+                padding: 0.5rem;
+            }
+            
+            .accordion-button {
+                padding: 0.75rem 1rem;
+                font-size: 0.85rem;
+            }
+            
+            .category-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            
+            .category-controls {
+                width: 100%;
+                margin-top: 5px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div id="root"></div>
+    <div id="pdf-content" style="display: none;"></div>
+
+    <script type="text/babel">
+        const { useState, useEffect, useRef } = React;
+
+        // IST Time Utility Functions
+        const ISTUtils = {
+            getISTDate: () => {
+                const now = new Date();
+                // IST is UTC+5:30
+                const istOffset = 5.5 * 60 * 60 * 1000;
+                const istTime = new Date(now.getTime() + istOffset);
+                return istTime.toISOString().split('T')[0];
+            },
+            
+            getISTDateTime: () => {
+                const now = new Date();
+                const istOffset = 5.5 * 60 * 60 * 1000;
+                const istTime = new Date(now.getTime() + istOffset);
+                return istTime.toISOString();
+            },
+            
+            getISTTimeString: () => {
+                const now = new Date();
+                const istOffset = 5.5 * 60 * 60 * 1000;
+                const istTime = new Date(now.getTime() + istOffset);
+                return istTime.toLocaleTimeString('en-IN', { 
+                    hour12: false,
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit',
+                    timeZone: 'Asia/Kolkata'
+                });
+            },
+            
+            formatISTDate: (dateString) => {
+                const date = new Date(dateString);
+                const istOffset = 5.5 * 60 * 60 * 1000;
+                const istTime = new Date(date.getTime() + istOffset);
+                return istTime.toLocaleDateString('en-IN', { 
+                    timeZone: 'Asia/Kolkata',
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+            },
+            
+            getCurrentISTDisplay: () => {
+                const now = new Date();
+                const istOffset = 5.5 * 60 * 60 * 1000;
+                const istTime = new Date(now.getTime() + istOffset);
+                return istTime.toLocaleDateString('en-IN', { 
+                    timeZone: 'Asia/Kolkata',
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                });
+            },
+            
+            getISTTimestamp: () => {
+                const now = new Date();
+                const istOffset = 5.5 * 60 * 60 * 1000;
+                const istTime = new Date(now.getTime() + istOffset);
+                return istTime.toLocaleString('en-IN', { 
+                    timeZone: 'Asia/Kolkata',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    second: '2-digit'
+                });
+            }
+        };
+
+        // Your Firebase Configuration
+        const firebaseConfig = {
+          apiKey: "AIzaSyCRuQgeNsWKWkKZ8e00smTF4e0rsW-d1ZU",
+          authDomain: "test-nov-3.firebaseapp.com",
+          projectId: "test-nov-3",
+          storageBucket: "test-nov-3.firebasestorage.app",
+          messagingSenderId: "256363656974",
+          appId: "1:256363656974:web:d499bed4d2a2010461895f"
+        };
+
+        // Initialize Firebase with error handling
+        let db = null;
+        let firebaseInitialized = false;
+        
+        try {
+            const app = firebase.initializeApp(firebaseConfig);
+            db = firebase.firestore();
+            firebaseInitialized = true;
+            console.log('✅ Firebase initialized successfully');
+        } catch (error) {
+            console.error('❌ Firebase initialization failed:', error);
+        }
+
+        // Orange Grand Categories and Items
+        const orangeGrandCategories = [
+            {
+                name: "General Store",
+                items: [
+                    "Kandi Pappu", "senagapappu", "Avatu", "jeelakarra", "dhaniyatu", 
+                    "vendi mirchi", "jeedi nooka", "puccha pappu", "nuvudu", "gagasalu", 
+                    "basmat rice", "rice", "MTR sambar", "MTR rasam", "versenaga gul", 
+                    "putnau", "Idil Ravva", "Bombay Rava", "Bombay senaga", "Pachi botani", 
+                    "Maida", "Atta", "Pasta", "Menthaku", "Menthulu", "Panchadara", 
+                    "Bellam", "Pesalu", "chips", "LG hingga", "Krishna Hing", 
+                    "Chicken Masala", "mutton masala", "lavangalu", "dalchini chek", 
+                    "japatri", "Anasapuvvu", "Yalukulu", "Shajeera", "Minyalu", "Daalda", "Oil",
+                    "Carrot", "Beetroot", "bangaldumpa", "Allam", "Velluli", 
+                    "Velluli Rekalu", "Ullipaya", "Nimmakaya", "Chamadumpa", "Kanda", 
+                    "Veg Leaves", "Totakura", "Palakura", "Gongura", "Chukakura", 
+                    "Pudina", "Kothimera", "Karvepaku", "Menthikura"
+                ]
+            },
+            {
+                name: "Pickles",
+                items: [
+                    "Avakaya", "Tomato", "Gongura", "pand mirchi", "Ushikaya", 
+                    "Kandipodi", "Karampodi"
+                ]
+            },
+            {
+                name: "Cleaning",
+                items: [
+                    "Surf", "Steel piece", "Mop Stick", "Jug", "Bucket", 
+                    "Tub", "Floor Cleaner", "Caustic Soda", "Bleaching", "Cleaner"
+                ]
+            },
+            {
+                name: "Dairy",
+                items: [
+                    "Milk", "Curd", "Curd bucket", "Ghee", "Paneer", 
+                    "Cheese", "Butter", "Mushroom"
+                ]
+            },
+            {
+                name: "Vegetables",
+                items: [
+                    "Vankayalu", "Guttu vankaya", "Beerakalay", "Dondakayl", "Bendakayl", 
+                    "Tomato", "Chikudkay", "Kakarkayl", "Mullagkayl", "Cauliflower", 
+                    "Cabbage", "Anabakaya", "Mirchi", "Aritikaya", "Mamidkayal"
+                ]
+            },
+            {
+                name: "Gas",
+                items: [
+                    "Gas(dom)", "Gas(comm)"
+                ]
+            },
+            {
+                name: "Polymers",
+                items: [
+                    "Aritakulu", "10x12 dosa", "5x8", "10x12 hand", "13x16", 
+                    "6x8 silver", "8x10 silver", "500 ml box", "spoons", "plates", 
+                    "white papers", "food container", "catering plates"
+                ]
+            },
+            {
+                name: "Others",
+                items: [
+                    "Rice Powder", "Coconuts", "Newspapers"
+                ]
+            }
+        ];
+
+        // Orange Restaurant Categories and Items from the document
+        const orangeRestaurantCategories = [
+            {
+                name: "Meat",
+                items: [
+                    "EGGS", "CHICKEN", "MUTTON", "PRAWNSS", "FISH", "CREAM", 
+                    "SWEETCORN", "GREENPICE", "MUSHROOM"
+                ]
+            },
+            {
+                name: "Dairy",
+                items: [
+                    "CURD", "MILK", "BUTTER", "GHEE", "MILK MAID", "PANEER"
+                ]
+            },
+            {
+                name: "Vegetables",
+                items: [
+                    "ONIONS", "CARROT", "CAPSICUM", "BEANS", "TOMATO", "GREEN CHILLY", 
+                    "POTATOES", "BRINJAL", "GINGER", "GARLIC", "LEMONS", "BOTTLE GAURD", 
+                    "CALIFLOWER", "CABBAGE", "CORIANDER", "MENTOL", "CURRY LEAVES", "PALAK", "ULLI BONDU"
+                ]
+            },
+            {
+                name: "Rice",
+                items: [
+                    "BASMATHI RICE", "STAFF RICE"
+                ]
+            },
+            {
+                name: "Oils",
+                items: [
+                    "REINED OIL", "MUSTARD OIL", "SALAD OIL"
+                ]
+            },
+            {
+                name: "Fuel",
+                items: [
+                    "GAS", "COAL"
+                ]
+            },
+            {
+                name: "Kirana",
+                items: [
+                    "SALT", "SUGAR", "TAMARIND", "RED CHILLS", "MAIDA", "AATA", 
+                    "PACHENAGA PAPPU", "GROUND NUTS", "CASHEW NUTS", "BLACK SALT", 
+                    "PETAL SALT", "CHAT MASALA", "CHICKEN MASALA"
+                ]
+            },
+            {
+                name: "Biryani Masala",
+                items: [
+                    "LAVANGALU", "SHAJEERA", "YALAKULU", "DANIYALU", "JAPATHRI", 
+                    "ANASA PUVVU", "CHAKKA", "JEELAKARRA", "MIRIYALU", "MARATI MOGGA", 
+                    "BLACK YALAKULU", "BLACK JEERA"
+                ]
+            },
+            {
+                name: "Tins",
+                items: [
+                    "MUSHROOMS", "BABY CORN", "SWEET CORN", "NOODLES"
+                ]
+            },
+            {
+                name: "Powders",
+                items: [
+                    "COCO POWDER", "CHILLY POWDER", "TURMERIC POWDER", "PEPPER POWDER", 
+                    "CORN POWDER", "TASTING SALT", "METHI", "BREAD CORN POWDER", 
+                    "RED COLOR", "YELLOW COLOR", "GREEN COLOR"
+                ]
+            },
+            {
+                name: "Sauce",
+                items: [
+                    "CHILLY SAUCE", "RED CHILLY SAUCE", "PANDA SAUCE", "SOYA SAUCE", 
+                    "SHEZWAN SAUCE", "8 TO 8 SAUCE", "TOMATO KETCHUP", "WHOSTED SAUCE", 
+                    "TOMATO SAUCE(5 Ltr)", "CAPSICUM SAUCE", "VENIGER", "LEMON KETCHUP"
+                ]
+            },
+            {
+                name: "General",
+                items: [
+                    "CHICKEN STICKS 8INC", "TOOTH PICKS", "PAPER NAPKINS", "STRAWS", 
+                    "SCRUB PADS", "ROOM FRESHNERS", "HAND WASH", "PHENOIL", 
+                    "NAPTHELIN BALLS", "SWEET SOAMP", "SOAPS", "FLOOR WASH", 
+                    "SPOONS", "FORKS", "HEAD CAPS", "HIT", "BYGEN"
+                ]
+            },
+            {
+                name: "Plastics",
+                items: [
+                    "SILVER 5x6", "SILVER 9x12", "SILVER 8x10", "SILVER 7x9", 
+                    "SILVER 6x8", "PP 4x6", "CARRY BAGS 11x14", "CARRY BAGS 13x16", 
+                    "CARRY BAGS 17x20", "CARRY BAGS 10x12", "FOOD C. 250ML", 
+                    "FOOD C. 500ML", "FOOD C. 750ML", "FOOD C. 1000ML", 
+                    "FOOD C. 1200ML", "SILVER FOIL", "DISPOSAL PLATES"
+                ]
+            },
+            {
+                name: "Beverages",
+                items: [
+                    "THUMSUP 600ML", "THUMSUP 1LTR", "SPRITE 600ML", "SPRITE 1LTR", 
+                    "BISLERI W.B LTR", "KINLEY W.B LTR", "ORANGE W.B LTR", 
+                    "W.B 500ML", "WATER CANS", "PET BOTTLES"
+                ]
+            },
+            {
+                name: "Stationary",
+                items: [
+                    "VOCHER BOOKS", "KOT BOOKS", "SWIPING ROLLS", "BILL ROLLS", "PENS"
+                ]
+            },
+            {
+                name: "Pooja Items",
+                items: [
+                    "AGARBATHI", "CAMPHOR", "KUMKUM", "NUVVULA OIL", "COCONUTS", 
+                    "THAMALAPAKULU", "SWEET", "BANANAS"
+                ]
+            }
+        ];
+
+        // Enhanced Firebase Service with comprehensive error handling
+        const FirebaseService = {
+            async testConnection() {
+                if (!firebaseInitialized || !db) {
+                    return { success: false, error: 'Firebase not initialized' };
+                }
+                
+                try {
+                    const testRef = db.collection('testConnection').doc('test');
+                    await testRef.set({
+                        timestamp: ISTUtils.getISTDateTime(),
+                        test: true
+                    });
+                    
+                    const doc = await testRef.get();
+                    await testRef.delete();
+                    
+                    return { success: true, message: 'Firebase connection successful' };
+                } catch (error) {
+                    return { 
+                        success: false, 
+                        error: error.message,
+                        code: error.code,
+                        details: 'Check Firestore security rules'
+                    };
+                }
+            },
+
+            async saveOutletData(outlet, data) {
+                if (!firebaseInitialized || !db) {
+                    console.error('❌ Firebase not initialized - cannot save data');
+                    return false;
+                }
+                
+                try {
+                    console.log(`💾 Saving ${data.length} entries to Firebase for ${outlet}`);
+                    
+                    const docRef = db.collection('expenseData').doc(outlet);
+                    await docRef.set({
+                        dailyEntries: data,
+                        lastUpdated: firebase.firestore.FieldValue.serverTimestamp(),
+                        outlet: outlet,
+                        totalEntries: data.length,
+                        lastUpdatedIST: ISTUtils.getISTTimestamp()
+                    }, { merge: true });
+                    
+                    console.log(`✅ Data saved successfully for ${outlet}`);
+                    return true;
+                } catch (error) {
+                    console.error('❌ Error saving to Firebase:', error);
+                    return false;
+                }
+            },
+
+            async loadOutletData(outlet) {
+                if (!firebaseInitialized || !db) {
+                    console.error('❌ Firebase not initialized - cannot load data');
+                    return null;
+                }
+                
+                try {
+                    console.log(`📥 Loading data from Firebase for ${outlet}`);
+                    const doc = await db.collection('expenseData').doc(outlet).get();
+                    
+                    if (doc.exists) {
+                        const data = doc.data();
+                        console.log(`✅ Data loaded for ${outlet}: ${data.dailyEntries?.length || 0} entries`);
+                        return data.dailyEntries || [];
+                    } else {
+                        console.log(`📭 No data found for ${outlet}, will create on first save`);
+                        return [];
+                    }
+                } catch (error) {
+                    console.error('❌ Error loading from Firebase:', error);
+                    return null;
+                }
+            },
+
+            setupRealtimeListener(outlet, callback) {
+                if (!firebaseInitialized || !db) {
+                    console.error('❌ Firebase not initialized - cannot setup listener');
+                    return () => {};
+                }
+                
+                try {
+                    console.log(`👂 Setting up real-time listener for ${outlet}`);
+                    
+                    return db.collection('expenseData').doc(outlet).onSnapshot(
+                        (doc) => {
+                            if (doc.exists) {
+                                const data = doc.data();
+                                console.log(`📡 Real-time update for ${outlet}: ${data.dailyEntries?.length || 0} entries`);
+                                callback(data.dailyEntries || []);
+                            } else {
+                                console.log(`📭 Real-time: No document found for ${outlet}`);
+                                callback([]);
+                            }
+                        },
+                        (error) => {
+                            console.error('❌ Real-time listener error:', error);
+                        }
+                    );
+                } catch (error) {
+                    console.error('❌ Error setting up real-time listener:', error);
+                    return () => {};
+                }
+            }
+        };
+
+        const LoginPage = ({ onLogin }) => {
+            const [username, setUsername] = useState('');
+            const [password, setPassword] = useState('');
+            const [error, setError] = useState('');
+
+            const handleSubmit = (e) => {
+                e.preventDefault();
+                setError('');
+
+                const user = USER_CREDENTIALS.find(
+                    u => u.username === username && u.password === password
+                );
+
+                if (user) {
+                    onLogin(user);
+                } else {
+                    setError('Invalid username or password');
+                }
+            };
+
+            return (
+                <div className="login-container">
+                    <div className="card login-card">
+                        <div className="card-header text-center">
+                            <h3> Orange Expense Tracker</h3>
+                            <p className="mb-0">Please login to continue</p>
+                        </div>
+                        <div className="card-body">
+                            <form onSubmit={handleSubmit}>
+                                <div className="mb-3">
+                                    <label htmlFor="username" className="form-label">Username</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        id="username"
+                                        value={username}
+                                        onChange={(e) => setUsername(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                <div className="mb-3">
+                                    <label htmlFor="password" className="form-label">Password</label>
+                                    <input
+                                        type="password"
+                                        className="form-control"
+                                        id="password"
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                    />
+                                </div>
+                                {error && (
+                                    <div className="alert alert-danger">{error}</div>
+                                )}
+                                <button type="submit" className="btn btn-primary w-100">
+                                    <i className="bi bi-box-arrow-in-right"></i> Login
+                                </button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Orange Grand Item Accordion Component
+        const OrangeGrandAccordion = ({ dailyItems, updateItemField, removeUnexpectedItem }) => {
+            const [activeCategory, setActiveCategory] = useState(null);
+            
+            useEffect(() => {
+                if (dailyItems.length === 0) {
+                    // This would be handled by the parent component
+                }
+            }, [dailyItems]);
+            
+            const toggleCategory = (categoryName) => {
+                setActiveCategory(activeCategory === categoryName ? null : categoryName);
+            };
+            
+            const getItemsForCategory = (categoryName) => {
+                return dailyItems.filter(item => 
+                    !item.isUnexpected && item.category === categoryName
+                );
+            };
+            
+            return (
+                <div className="accordion mb-4" id="orangeGrandAccordion">
+                    {orangeGrandCategories.map((category, index) => {
+                        const categoryItems = getItemsForCategory(category.name);
+                        const isActive = activeCategory === category.name;
+                        
+                        return (
+                            <div className="accordion-item" key={index}>
+                                <h2 className="accordion-header">
+                                    <button 
+                                        className={`accordion-button ${isActive ? '' : 'collapsed'}`}
+                                        type="button"
+                                        onClick={() => toggleCategory(category.name)}
+                                    >
+                                        <i className="bi bi-chevron-down me-2"></i>
+                                        {category.name}
+                                        <span className="badge bg-secondary ms-2">{categoryItems.length}</span>
+                                    </button>
+                                </h2>
+                                <div className={`accordion-collapse collapse ${isActive ? 'show' : ''}`}>
+                                    <div className="accordion-body">
+                                        {category.items.map((itemName, itemIndex) => {
+                                            const existingItem = categoryItems.find(item => item.name === itemName);
+                                            const itemId = existingItem ? existingItem.id : `cat-${index}-item-${itemIndex}`;
+                                            
+                                            return (
+                                                <div className="category-item" key={itemIndex}>
+                                                    <div className="category-name">{itemName}</div>
+                                                    <div className="category-controls">
+                                                        <input 
+                                                            type="text" 
+                                                            className="form-control category-qty-input"
+                                                            placeholder="Qty"
+                                                            value={existingItem ? existingItem.quantity : ''}
+                                                            onChange={(e) => updateItemField(itemId, 'quantity', e.target.value, category.name, itemName)}
+                                                        />
+                                                        <div className="input-group category-price-input">
+                                                            <span className="input-group-text">₹</span>
+                                                            <input 
+                                                                type="text" 
+                                                                className="form-control"
+                                                                placeholder="Price"
+                                                                value={existingItem ? existingItem.price : ''}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                                                        updateItemField(itemId, 'price', value, category.name, itemName);
+                                                                    }
+                                                                }}
+                                                                pattern="[0-9.]*"
+                                                                inputMode="decimal"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        };
+
+        // Orange Restaurant Item Accordion Component
+        const OrangeRestaurantAccordion = ({ dailyItems, updateItemField, removeUnexpectedItem }) => {
+            const [activeCategory, setActiveCategory] = useState(null);
+            
+            useEffect(() => {
+                if (dailyItems.length === 0) {
+                    // This would be handled by the parent component
+                }
+            }, [dailyItems]);
+            
+            const toggleCategory = (categoryName) => {
+                setActiveCategory(activeCategory === categoryName ? null : categoryName);
+            };
+            
+            const getItemsForCategory = (categoryName) => {
+                return dailyItems.filter(item => 
+                    !item.isUnexpected && item.category === categoryName
+                );
+            };
+            
+            return (
+                <div className="accordion mb-4" id="orangeRestaurantAccordion">
+                    {orangeRestaurantCategories.map((category, index) => {
+                        const categoryItems = getItemsForCategory(category.name);
+                        const isActive = activeCategory === category.name;
+                        
+                        return (
+                            <div className="accordion-item" key={index}>
+                                <h2 className="accordion-header">
+                                    <button 
+                                        className={`accordion-button ${isActive ? '' : 'collapsed'}`}
+                                        type="button"
+                                        onClick={() => toggleCategory(category.name)}
+                                    >
+                                        <i className="bi bi-chevron-down me-2"></i>
+                                        {category.name}
+                                        <span className="badge bg-secondary ms-2">{categoryItems.length}</span>
+                                    </button>
+                                </h2>
+                                <div className={`accordion-collapse collapse ${isActive ? 'show' : ''}`}>
+                                    <div className="accordion-body">
+                                        {category.items.map((itemName, itemIndex) => {
+                                            const existingItem = categoryItems.find(item => item.name === itemName);
+                                            const itemId = existingItem ? existingItem.id : `cat-${index}-item-${itemIndex}`;
+                                            
+                                            return (
+                                                <div className="category-item" key={itemIndex}>
+                                                    <div className="category-name">{itemName}</div>
+                                                    <div className="category-controls">
+                                                        <input 
+                                                            type="text" 
+                                                            className="form-control category-qty-input"
+                                                            placeholder="Qty"
+                                                            value={existingItem ? existingItem.quantity : ''}
+                                                            onChange={(e) => updateItemField(itemId, 'quantity', e.target.value, category.name, itemName)}
+                                                        />
+                                                        <div className="input-group category-price-input">
+                                                            <span className="input-group-text">₹</span>
+                                                            <input 
+                                                                type="text" 
+                                                                className="form-control"
+                                                                placeholder="Price"
+                                                                value={existingItem ? existingItem.price : ''}
+                                                                onChange={(e) => {
+                                                                    const value = e.target.value;
+                                                                    if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                                                        updateItemField(itemId, 'price', value, category.name, itemName);
+                                                                    }
+                                                                }}
+                                                                pattern="[0-9.]*"
+                                                                inputMode="decimal"
+                                                            />
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                </div>
+                            </div>
+                        );
+                    })}
+                </div>
+            );
+        };
+
+        // Past Entry Tab Component
+        const PastEntryTab = ({ 
+            currentOutlet, 
+            getOutletName, 
+            currentUser, 
+            dailyItems, 
+            updateItemField, 
+            addUnexpectedItem, 
+            removeUnexpectedItem, 
+            newUnexpectedItem, 
+            setNewUnexpectedItem,
+            todayTotal,
+            addPastEntry 
+        }) => {
+            const [selectedDate, setSelectedDate] = useState(
+                new Date(new Date().setDate(new Date().getDate() - 1)).toISOString().split('T')[0]
+            );
+            
+            useEffect(() => {
+                // This would be handled by the parent component
+            }, [currentOutlet]);
+            
+            const handleSaveEntry = () => {
+                if (!selectedDate) {
+                    alert("Please select a date");
+                    return;
+                }
+                
+                addPastEntry(selectedDate);
+            };
+            
+            const getDateDisplay = (dateString) => {
+                return ISTUtils.formatISTDate(dateString);
+            };
+            
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <h5 className="mb-0">Past Expense Entry - {getOutletName(currentOutlet)}</h5>
+                    </div>
+                    <div className="card-body">
+                        <div className="alert alert-info">
+                            <i className="bi bi-info-circle"></i> Enter expenses for previous dates that you missed to record
+                        </div>
+                        
+                        <div className="past-date-selector">
+                            <div className="row">
+                                <div className="col-md-6">
+                                    <label htmlFor="pastDate" className="form-label">Select Date</label>
+                                    <input 
+                                        type="date" 
+                                        className="form-control" 
+                                        id="pastDate"
+                                        value={selectedDate}
+                                        onChange={(e) => setSelectedDate(e.target.value)}
+                                        max={ISTUtils.getISTDate()}
+                                    />
+                                </div>
+                                <div className="col-md-6 d-flex align-items-end">
+                                    <div className="w-100">
+                                        <div className="past-entry-info">
+                                            <strong>Selected Date:</strong> {getDateDisplay(selectedDate)}
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="row mb-4">
+                            <div className="col-md-12">
+                                <h6>Date: {getDateDisplay(selectedDate)}</h6>
+                                <p className="text-muted">Submitted by: {currentUser.name}</p>
+                            </div>
+                        </div>
+
+                        <h6>Regular Items</h6>
+                        
+                        {currentOutlet === 'orange_grand' ? (
+                            <OrangeGrandAccordion 
+                                dailyItems={dailyItems}
+                                updateItemField={updateItemField}
+                                removeUnexpectedItem={removeUnexpectedItem}
+                            />
+                        ) : (
+                            <OrangeRestaurantAccordion 
+                                dailyItems={dailyItems}
+                                updateItemField={updateItemField}
+                                removeUnexpectedItem={removeUnexpectedItem}
+                            />
+                        )}
+
+                        <h6>Unexpected Items</h6>
+                        <div className="table-responsive mb-4">
+                            <table className="table table-striped">
+                                <thead>
+                                    <tr>
+                                        <th>Item</th>
+                                        <th width="150">Quantity</th>
+                                        <th width="200">Total Price (₹)</th>
+                                        <th width="80">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {dailyItems.filter(item => item.isUnexpected).map(item => (
+                                        <tr key={item.id}>
+                                            <td>{item.name}</td>
+                                            <td>
+                                                <input 
+                                                    type="text" 
+                                                    className="form-control" 
+                                                    value={item.quantity} 
+                                                    onChange={(e) => updateItemField(item.id, 'quantity', e.target.value)}
+                                                    placeholder="Qty"
+                                                    required
+                                                />
+                                            </td>
+                                            <td>
+                                                <div className="input-group">
+                                                    <span className="input-group-text">₹</span>
+                                                    <input 
+                                                        type="text" 
+                                                        className="form-control" 
+                                                        value={item.price} 
+                                                        onChange={(e) => {
+                                                            const value = e.target.value;
+                                                            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                                                updateItemField(item.id, 'price', value);
+                                                            }
+                                                        }}
+                                                        placeholder="Total Price"
+                                                        pattern="[0-9.]*"
+                                                        inputMode="decimal"
+                                                        required
+                                                    />
+                                                </div>
+                                            </td>
+                                            <td>
+                                                <button 
+                                                    className="btn btn-sm btn-outline-danger"
+                                                    onClick={() => removeUnexpectedItem(item.id)}
+                                                >
+                                                    <i className="bi bi-trash"></i>
+                                                </button>
+                                            </td>
+                                        </tr>
+                                    ))}
+                                    <tr>
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                className="form-control" 
+                                                placeholder="New item name"
+                                                value={newUnexpectedItem.name}
+                                                onChange={(e) => setNewUnexpectedItem({...newUnexpectedItem, name: e.target.value})}
+                                            />
+                                        </td>
+                                        <td>
+                                            <input 
+                                                type="text" 
+                                                className="form-control" 
+                                                placeholder="Qty"
+                                                value={newUnexpectedItem.quantity}
+                                                onChange={(e) => setNewUnexpectedItem({...newUnexpectedItem, quantity: e.target.value})}
+                                                required
+                                            />
+                                        </td>
+                                        <td>
+                                            <div className="input-group">
+                                                <span className="input-group-text">₹</span>
+                                                <input 
+                                                    type="text" 
+                                                    className="form-control" 
+                                                    placeholder="Total Price"
+                                                    value={newUnexpectedItem.price}
+                                                    onChange={(e) => {
+                                                        const value = e.target.value;
+                                                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                                            setNewUnexpectedItem({...newUnexpectedItem, price: value});
+                                                        }
+                                                    }}
+                                                    pattern="[0-9.]*"
+                                                    inputMode="decimal"
+                                                    required
+                                                />
+                                            </div>
+                                        </td>
+                                        <td>
+                                            <button 
+                                                className="btn btn-primary btn-sm"
+                                                onClick={addUnexpectedItem}
+                                            >
+                                                <i className="bi bi-plus"></i> Add
+                                            </button>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                        
+                        <div className="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded">
+                            <h5 className="mb-0">Current Total: <span className="text-success">₹{todayTotal.toFixed(2)}</span></h5>
+                            <button className="btn btn-primary btn-lg" onClick={handleSaveEntry}>
+                                <i className="bi bi-save"></i> Save Past Entry for {getDateDisplay(selectedDate)}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        // Enhanced AnalysisTab Component
+        const AnalysisTab = ({ dailyEntries, currentOutlet, getOutletName, isRealTimeActive, firebaseStatus }) => {
+            const [searchTerm, setSearchTerm] = useState('');
+            const [selectedItem, setSelectedItem] = useState('');
+            const [suggestions, setSuggestions] = useState([]);
+            const [showSuggestions, setShowSuggestions] = useState(false);
+            const [expenseData, setExpenseData] = useState({
+                daily: 0,
+                weekly: 0,
+                monthly: 0,
+                total: 0
+            });
+            const [comparisonPeriod, setComparisonPeriod] = useState('week');
+            const [comparisonData, setComparisonData] = useState([]);
+            const [pieChartData, setPieChartData] = useState(null);
+            const [comparisonChartData, setComparisonChartData] = useState(null);
+            const pieChartRef = useRef(null);
+            const comparisonChartRef = useRef(null);
+
+            const getAllItems = () => {
+                const items = new Set();
+                dailyEntries.forEach(entry => {
+                    entry.materials.forEach(material => {
+                        items.add(material.name);
+                    });
+                });
+                return Array.from(items);
+            };
+
+            useEffect(() => {
+                if (searchTerm.trim() === '') {
+                    setSuggestions([]);
+                    return;
+                }
+
+                const allItems = getAllItems();
+                const filtered = allItems.filter(item => 
+                    item.toLowerCase().includes(searchTerm.toLowerCase())
+                );
+                setSuggestions(filtered);
+            }, [searchTerm, dailyEntries]);
+
+            useEffect(() => {
+                if (!selectedItem) {
+                    setExpenseData({ daily: 0, weekly: 0, monthly: 0, total: 0 });
+                    return;
+                }
+
+                const now = new Date();
+                const todayIST = ISTUtils.getISTDate();
+                const oneWeekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+                const oneWeekAgoIST = new Date(oneWeekAgo.getTime() + (5.5 * 60 * 60 * 1000)).toISOString().split('T')[0];
+                const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                const firstDayOfMonthIST = new Date(firstDayOfMonth.getTime() + (5.5 * 60 * 60 * 1000)).toISOString().split('T')[0];
+
+                let dailyTotal = 0;
+                let weeklyTotal = 0;
+                let monthlyTotal = 0;
+                let allTimeTotal = 0;
+
+                dailyEntries.forEach(entry => {
+                    const entryDate = entry.date;
+                    entry.materials.forEach(material => {
+                        if (material.name === selectedItem) {
+                            const amount = material.itemTotal || parseFloat(material.price) || 0;
+                            allTimeTotal += amount;
+
+                            if (entryDate === todayIST) {
+                                dailyTotal += amount;
+                            }
+
+                            if (entryDate >= oneWeekAgoIST) {
+                                weeklyTotal += amount;
+                            }
+
+                            if (entryDate >= firstDayOfMonthIST) {
+                                monthlyTotal += amount;
+                            }
+                        }
+                    });
+                });
+
+                setExpenseData({
+                    daily: dailyTotal,
+                    weekly: weeklyTotal,
+                    monthly: monthlyTotal,
+                    total: allTimeTotal
+                });
+            }, [selectedItem, dailyEntries]);
+
+            useEffect(() => {
+                if (!selectedItem) {
+                    setComparisonData([]);
+                    return;
+                }
+
+                const now = new Date();
+                let data = [];
+
+                if (comparisonPeriod === 'week') {
+                    for (let i = 6; i >= 0; i--) {
+                        const date = new Date(now);
+                        date.setDate(date.getDate() - i);
+                        const dateStr = new Date(date.getTime() + (5.5 * 60 * 60 * 1000)).toISOString().split('T')[0];
+                        
+                        let dayTotal = 0;
+                        dailyEntries.forEach(entry => {
+                            if (entry.date === dateStr) {
+                                entry.materials.forEach(material => {
+                                    if (material.name === selectedItem) {
+                                        const amount = material.itemTotal || parseFloat(material.price) || 0;
+                                        dayTotal += amount;
+                                    }
+                                });
+                            }
+                        });
+                        
+                        data.push({
+                            label: date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }),
+                            value: dayTotal
+                        });
+                    }
+                } else if (comparisonPeriod === 'month') {
+                    for (let i = 3; i >= 0; i--) {
+                        const weekStart = new Date(now);
+                        weekStart.setDate(weekStart.getDate() - (i * 7) - weekStart.getDay() + 1);
+                        
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekEnd.getDate() + 6);
+                        
+                        let weekTotal = 0;
+                        dailyEntries.forEach(entry => {
+                            const entryDate = new Date(entry.date);
+                            if (entryDate >= weekStart && entryDate <= weekEnd) {
+                                entry.materials.forEach(material => {
+                                    if (material.name === selectedItem) {
+                                        const amount = material.itemTotal || parseFloat(material.price) || 0;
+                                        weekTotal += amount;
+                                    }
+                                });
+                            }
+                        });
+                        
+                        data.push({
+                            label: `Week ${4-i} (${weekStart.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${weekEnd.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`,
+                            value: weekTotal
+                        });
+                    }
+                } else if (comparisonPeriod === 'quarter') {
+                    for (let i = 2; i >= 0; i--) {
+                        const month = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                        const monthName = month.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+                        
+                        let monthTotal = 0;
+                        dailyEntries.forEach(entry => {
+                            const entryDate = new Date(entry.date);
+                            if (entryDate.getMonth() === month.getMonth() && entryDate.getFullYear() === month.getFullYear()) {
+                                entry.materials.forEach(material => {
+                                    if (material.name === selectedItem) {
+                                        const amount = material.itemTotal || parseFloat(material.price) || 0;
+                                        monthTotal += amount;
+                                    }
+                                });
+                            }
+                        });
+                        
+                        data.push({
+                            label: monthName,
+                            value: monthTotal
+                        });
+                    }
+                }
+
+                setComparisonData(data);
+            }, [selectedItem, comparisonPeriod, dailyEntries]);
+
+            useEffect(() => {
+                if (!pieChartRef.current) return;
+
+                const allItemsExpenses = {};
+                dailyEntries.forEach(entry => {
+                    entry.materials.forEach(material => {
+                        const amount = material.itemTotal || parseFloat(material.price) || 0;
+                        if (allItemsExpenses[material.name]) {
+                            allItemsExpenses[material.name] += amount;
+                        } else {
+                            allItemsExpenses[material.name] = amount;
+                        }
+                    });
+                });
+
+                const sortedItems = Object.entries(allItemsExpenses)
+                    .sort((a, b) => b[1] - a[1]);
+
+                const top10Items = sortedItems.slice(0, 10);
+                const othersItems = sortedItems.slice(10);
+                
+                const othersTotal = othersItems.reduce((sum, item) => sum + item[1], 0);
+
+                let labels = top10Items.map(item => item[0]);
+                let data = top10Items.map(item => item[1]);
+                
+                let backgroundColors = labels.map(label => {
+                    if (selectedItem && label === selectedItem) {
+                        return '#ff7f00';
+                    } else {
+                        return '#6c757d';
+                    }
+                });
+
+                if (othersItems.length > 0) {
+                    labels.push('Others');
+                    data.push(othersTotal);
+                    const isSelectedInOthers = othersItems.some(item => item[0] === selectedItem);
+                    backgroundColors.push(isSelectedInOthers ? '#ff7f00' : '#adb5bd');
+                }
+
+                const ctx = pieChartRef.current.getContext('2d');
+                
+                if (pieChartData) {
+                    pieChartData.destroy();
+                }
+
+                const newChart = new Chart(ctx, {
+                    type: 'pie',
+                    data: {
+                        labels: labels,
+                        datasets: [{
+                            data: data,
+                            backgroundColor: backgroundColors,
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: {
+                                position: 'right',
+                                labels: {
+                                    boxWidth: 12,
+                                    font: {
+                                        size: 10
+                                    }
+                                }
+                            },
+                            title: {
+                                display: true,
+                                text: selectedItem 
+                                    ? `Expense Distribution - ${selectedItem} Highlighted`
+                                    : 'Expense Distribution (Top 10 + Others)'
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(context) {
+                                        const label = context.label || '';
+                                        const value = context.raw || 0;
+                                        const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                        const percentage = Math.round((value / total) * 100);
+                                        return `${label}: ₹${value.toFixed(2)} (${percentage}%)`;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+
+                setPieChartData(newChart);
+            }, [dailyEntries, selectedItem]);
+
+            useEffect(() => {
+                if (!selectedItem || !comparisonChartRef.current || comparisonData.length === 0) return;
+
+                const ctx = comparisonChartRef.current.getContext('2d');
+                
+                if (comparisonChartData) {
+                    comparisonChartData.destroy();
+                }
+
+                const newChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: comparisonData.map(item => item.label),
+                        datasets: [{
+                            label: `Spending on ${selectedItem}`,
+                            data: comparisonData.map(item => item.value),
+                            backgroundColor: '#ff7f00',
+                            borderColor: '#cc6600',
+                            borderWidth: 1
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: {
+                            legend: {
+                                display: true,
+                                position: 'top',
+                            },
+                            title: {
+                                display: true,
+                                text: `${comparisonPeriod.charAt(0).toUpperCase() + comparisonPeriod.slice(1)}ly Spending Comparison`
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: 'Amount (₹)'
+                                }
+                            }
+                        }
+                    }
+                });
+
+                setComparisonChartData(newChart);
+            }, [comparisonData, selectedItem, comparisonPeriod]);
+
+            const handleSuggestionClick = (item) => {
+                setSelectedItem(item);
+                setSearchTerm(item);
+                setShowSuggestions(false);
+            };
+
+            const totalExpenses = dailyEntries.reduce((sum, entry) => sum + entry.total, 0);
+            const selectedItemPercentage = selectedItem && totalExpenses > 0 
+                ? ((expenseData.total / totalExpenses) * 100).toFixed(1) 
+                : 0;
+
+            return (
+                <div className="card">
+                    <div className="card-header d-flex justify-content-between align-items-center">
+                        <h5 className="mb-0">Expense Analysis - {getOutletName(currentOutlet)}</h5>
+                        <div>
+                            {firebaseStatus === 'connected' ? (
+                                <span className="badge bg-success real-time-badge">
+                                    <i className="bi bi-circle-fill"></i> {isRealTimeActive ? 'Live Data' : 'Firebase Connected'}
+                                </span>
+                            ) : (
+                                <span className="badge bg-warning">
+                                    <i className="bi bi-exclamation-triangle"></i> Local Data Only
+                                </span>
+                            )}
+                        </div>
+                    </div>
+                    <div className="card-body">
+                        
+                        {dailyEntries.length === 0 ? (
+                            <div className="text-center py-5">
+                                <i className="bi bi-inbox display-1 text-muted"></i>
+                                <h4 className="mt-3 text-muted">No expense data available</h4>
+                                <p className="text-muted">Start adding daily entries to see analysis data</p>
+                                {firebaseStatus !== 'connected' && (
+                                    <div className="alert alert-warning mt-3">
+                                        <i className="bi bi-exclamation-triangle"></i> Firebase connection required for multi-device sync
+                                    </div>
+                                )}
+                            </div>
+                        ) : (
+                            <>
+                                <div className="row mb-4">
+                                    <div className="col-md-6">
+                                        <div className="form-group">
+                                            <label htmlFor="itemSearch" className="form-label">Search Item</label>
+                                            <input
+                                                type="text"
+                                                className="form-control"
+                                                id="itemSearch"
+                                                placeholder="Start typing to search items..."
+                                                value={searchTerm}
+                                                onChange={(e) => {
+                                                    setSearchTerm(e.target.value);
+                                                    setShowSuggestions(true);
+                                                }}
+                                                onFocus={() => setShowSuggestions(true)}
+                                            />
+                                            {showSuggestions && suggestions.length > 0 && (
+                                                <div className="dropdown-menu show w-100">
+                                                    {suggestions.map((item, index) => (
+                                                        <button
+                                                            key={index}
+                                                            className={`dropdown-item ${selectedItem === item ? 'highlighted-item' : ''}`}
+                                                            type="button"
+                                                            onClick={() => handleSuggestionClick(item)}
+                                                        >
+                                                            {item}
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div className="chart-container">
+                                    <canvas ref={pieChartRef}></canvas>
+                                </div>
+
+                                {selectedItem && (
+                                    <div>
+                                        <div className="expense-breakdown">
+                                            <h5>Expense Breakdown for "{selectedItem}"</h5>
+                                            <div className="row mt-3">
+                                                <div className="col-md-3 text-center">
+                                                    <div className="card bg-light">
+                                                        <div className="card-body">
+                                                            <h6>Today</h6>
+                                                            <h4 className="text-primary">₹{expenseData.daily.toFixed(2)}</h4>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="col-md-3 text-center">
+                                                    <div className="card bg-light">
+                                                        <div className="card-body">
+                                                            <h6>This Week</h6>
+                                                            <h4 className="text-success">₹{expenseData.weekly.toFixed(2)}</h4>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="col-md-3 text-center">
+                                                    <div className="card bg-light">
+                                                        <div className="card-body">
+                                                            <h6>This Month</h6>
+                                                            <h4 className="text-warning">₹{expenseData.monthly.toFixed(2)}</h4>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                                <div className="col-md-3 text-center">
+                                                    <div className="card bg-light">
+                                                        <div className="card-body">
+                                                            <h6>All Time</h6>
+                                                            <h4 className="text-danger">₹{expenseData.total.toFixed(2)}</h4>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="row mt-4">
+                                            <div className="col-md-6">
+                                                <h5>Insights</h5>
+                                                <div className="alert alert-info">
+                                                    <p>
+                                                        <strong>{selectedItem}</strong> represents{' '}
+                                                        <strong>{selectedItemPercentage}%</strong>{' '}
+                                                        of your total expenses.
+                                                    </p>
+                                                    <p>
+                                                        Your monthly spending on this item is{' '}
+                                                        <strong>₹{expenseData.monthly.toFixed(2)}</strong>.
+                                                    </p>
+                                                    {expenseData.weekly > 0 && (
+                                                        <p>
+                                                            This week, you've spent{' '}
+                                                            <strong>₹{expenseData.weekly.toFixed(2)}</strong> on {selectedItem}.
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="period-selector">
+                                            <h5>Spending Comparison</h5>
+                                            <div className="row">
+                                                <div className="col-md-4">
+                                                    <select 
+                                                        className="form-select"
+                                                        value={comparisonPeriod}
+                                                        onChange={(e) => setComparisonPeriod(e.target.value)}
+                                                    >
+                                                        <option value="week">Last 7 Days</option>
+                                                        <option value="month">Last 4 Weeks</option>
+                                                        <option value="quarter">Last 3 Months</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+
+                                        <div className="comparison-chart">
+                                            <canvas ref={comparisonChartRef}></canvas>
+                                        </div>
+
+                                        <div className="mt-4">
+                                            <h5>Comparison Details</h5>
+                                            <div className="table-responsive">
+                                                <table className="table table-striped">
+                                                    <thead>
+                                                        <tr>
+                                                            <th>Period</th>
+                                                            <th>Amount Spent</th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {comparisonData.map((item, index) => (
+                                                            <tr key={index}>
+                                                                <td>{item.label}</td>
+                                                                <td><strong>₹{item.value.toFixed(2)}</strong></td>
+                                                            </tr>
+                                                        ))}
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+
+                                {!selectedItem && (
+                                    <div className="text-center py-5">
+                                        <i className="bi bi-search display-1 text-muted"></i>
+                                        <h4 className="mt-3 text-muted">Search for an item to see detailed analysis</h4>
+                                        <p className="text-muted">Start typing in the search box above to find items from your expense history</p>
+                                    </div>
+                                )}
+                            </>
+                        )}
+                    </div>
+                </div>
+            );
+        };
+
+        const App = () => {
+            const [currentUser, setCurrentUser] = useState(null);
+            const [currentOutlet, setCurrentOutlet] = useState('orange_grand');
+            const [dailyEntries, setDailyEntries] = useState([]);
+            const [activeTab, setActiveTab] = useState('daily');
+            const [syncStatus, setSyncStatus] = useState('idle');
+            const [lastSync, setLastSync] = useState(null);
+            const [isRealTimeActive, setIsRealTimeActive] = useState(false);
+            const [debugInfo, setDebugInfo] = useState([]);
+            const [firebaseStatus, setFirebaseStatus] = useState('checking');
+            
+            const [outletData, setOutletData] = useState({
+                orange_grand: [],
+                orange_restaurant: []
+            });
+
+            const [dailyItems, setDailyItems] = useState([]);
+            const [newUnexpectedItem, setNewUnexpectedItem] = useState({ name: '', price: '', quantity: '' });
+            const [realtimeUnsubscribe, setRealtimeUnsubscribe] = useState(null);
+            const [isLocalChange, setIsLocalChange] = useState(false);
+
+            const addDebugMessage = (message, type = 'info') => {
+                const timestamp = ISTUtils.getISTTimeString();
+                const newMessage = `[${timestamp}] ${message}`;
+                setDebugInfo(prev => [...prev.slice(-9), newMessage]);
+                console.log(`[${type.toUpperCase()}] ${newMessage}`);
+            };
+
+            useEffect(() => {
+                const testConnection = async () => {
+                    addDebugMessage('Testing Firebase connection...', 'info');
+                    setFirebaseStatus('testing');
+                    
+                    const result = await FirebaseService.testConnection();
+                    
+                    if (result.success) {
+                        addDebugMessage('✅ Firebase connection successful', 'success');
+                        setFirebaseStatus('connected');
+                    } else {
+                        addDebugMessage(`❌ Firebase connection failed: ${result.error}`, 'error');
+                        setFirebaseStatus('failed');
+                    }
+                };
+
+                testConnection();
+            }, []);
+
+            useEffect(() => {
+                const initializeData = async () => {
+                    addDebugMessage('Initializing application data...', 'info');
+                    setSyncStatus('syncing');
+                    
+                    const savedOutlet = localStorage.getItem('currentOutlet') || 'orange_grand';
+                    setCurrentOutlet(savedOutlet);
+                    
+                    const grandEntries = await FirebaseService.loadOutletData('orange_grand');
+                    const restaurantEntries = await FirebaseService.loadOutletData('orange_restaurant');
+                    
+                    setOutletData({
+                        orange_grand: grandEntries || [],
+                        orange_restaurant: restaurantEntries || []
+                    });
+                    
+                    const currentEntries = savedOutlet === 'orange_grand' ? grandEntries : restaurantEntries;
+                    if (currentEntries !== null) {
+                        setDailyEntries(currentEntries);
+                        setSyncStatus('success');
+                        setLastSync(new Date());
+                        addDebugMessage(`✅ Loaded ${currentEntries.length} entries for ${savedOutlet}`, 'success');
+                    } else {
+                        const savedDailyEntries = JSON.parse(localStorage.getItem(`dailyEntries_${savedOutlet}`)) || [];
+                        setDailyEntries(savedDailyEntries);
+                        setSyncStatus('error');
+                        addDebugMessage(`⚠️ Using localStorage fallback with ${savedDailyEntries.length} entries`, 'warning');
+                    }
+                    
+                    resetDailyItems(savedOutlet);
+                };
+
+                if (firebaseStatus === 'connected' || firebaseStatus === 'failed') {
+                    initializeData();
+                }
+            }, [firebaseStatus]);
+
+            useEffect(() => {
+                if (firebaseStatus !== 'connected') return;
+                
+                if (realtimeUnsubscribe) {
+                    addDebugMessage('Unsubscribing from previous real-time listener', 'info');
+                    realtimeUnsubscribe();
+                }
+                
+                addDebugMessage(`Setting up real-time listener for ${currentOutlet}`, 'info');
+                
+                setIsRealTimeActive(false);
+                
+                const unsubscribe = FirebaseService.setupRealtimeListener(currentOutlet, (entries) => {
+                    addDebugMessage(`📡 Real-time update received: ${entries.length} entries`, 'success');
+                    
+                    setIsRealTimeActive(true);
+                    
+                    if (!isLocalChange) {
+                        setDailyEntries(entries);
+                        setOutletData(prev => ({
+                            ...prev,
+                            [currentOutlet]: entries
+                        }));
+                        setSyncStatus('success');
+                        setLastSync(new Date());
+                        localStorage.setItem(`dailyEntries_${currentOutlet}`, JSON.stringify(entries));
+                    }
+                    
+                    setIsLocalChange(false);
+                });
+                
+                setRealtimeUnsubscribe(() => unsubscribe);
+                
+                return () => {
+                    if (unsubscribe) {
+                        addDebugMessage('Cleaning up real-time listener', 'info');
+                        unsubscribe();
+                        setIsRealTimeActive(false);
+                    }
+                };
+            }, [currentOutlet, firebaseStatus]);
+
+            useEffect(() => {
+                if (dailyEntries.length >= 0 && currentUser && firebaseStatus === 'connected') {
+                    const shouldSave = isLocalChange || syncStatus === 'syncing';
+                    
+                    if (shouldSave && dailyEntries.length > 0) {
+                        addDebugMessage(`Data changed - saving ${dailyEntries.length} entries`, 'info');
+                        localStorage.setItem(`dailyEntries_${currentOutlet}`, JSON.stringify(dailyEntries));
+                        
+                        setOutletData(prev => ({
+                            ...prev,
+                            [currentOutlet]: dailyEntries
+                        }));
+                        
+                        const saveToFirebase = async () => {
+                            setSyncStatus('syncing');
+                            const success = await FirebaseService.saveOutletData(currentOutlet, dailyEntries);
+                            if (success) {
+                                setSyncStatus('success');
+                                setLastSync(new Date());
+                                addDebugMessage('✅ Data saved to Firebase successfully', 'success');
+                            } else {
+                                setSyncStatus('error');
+                                addDebugMessage('❌ Failed to save data to Firebase', 'error');
+                            }
+                        };
+                        
+                        saveToFirebase();
+                    }
+                }
+            }, [dailyEntries, currentOutlet, currentUser, firebaseStatus]);
+
+            const resetDailyItems = (outlet) => {
+                if (outlet === 'orange_grand') {
+                    const items = [];
+                    orangeGrandCategories.forEach(category => {
+                        category.items.forEach(itemName => {
+                            items.push({
+                                id: `cat-${category.name}-${itemName}`,
+                                name: itemName,
+                                price: '',
+                                quantity: '',
+                                isUnexpected: false,
+                                category: category.name
+                            });
+                        });
+                    });
+                    setDailyItems(items);
+                } else {
+                    const items = [];
+                    orangeRestaurantCategories.forEach(category => {
+                        category.items.forEach(itemName => {
+                            items.push({
+                                id: `cat-${category.name}-${itemName}`,
+                                name: itemName,
+                                price: '',
+                                quantity: '',
+                                isUnexpected: false,
+                                category: category.name
+                            });
+                        });
+                    });
+                    setDailyItems(items);
+                }
+            };
+
+            const switchOutlet = async (outlet) => {
+                addDebugMessage(`Switching outlet to: ${outlet}`, 'info');
+                
+                setIsRealTimeActive(false);
+                setCurrentOutlet(outlet);
+                localStorage.setItem('currentOutlet', outlet);
+                
+                setSyncStatus('syncing');
+                
+                const outletEntries = outletData[outlet] || [];
+                setDailyEntries(outletEntries);
+                setSyncStatus('success');
+                setLastSync(new Date());
+                addDebugMessage(`✅ Switched to ${outlet} with ${outletEntries.length} entries`, 'success');
+                
+                resetDailyItems(outlet);
+                setNewUnexpectedItem({ name: '', price: '', quantity: '' });
+                
+                setTimeout(() => {
+                    setIsRealTimeActive(true);
+                }, 1000);
+            };
+
+            const updateItemField = (id, field, value, category = null, name = null) => {
+                setDailyItems(prev => {
+                    const existingItemIndex = prev.findIndex(item => item.id === id);
+                    
+                    if (existingItemIndex >= 0) {
+                        return prev.map(item => 
+                            item.id === id ? { ...item, [field]: value } : item
+                        );
+                    } else {
+                        const newItem = {
+                            id: id,
+                            name: name,
+                            price: field === 'price' ? value : '',
+                            quantity: field === 'quantity' ? value : '',
+                            isUnexpected: false,
+                            category: category
+                        };
+                        return [...prev, newItem];
+                    }
+                });
+            };
+
+            const addUnexpectedItem = () => {
+                if (newUnexpectedItem.name && newUnexpectedItem.price && newUnexpectedItem.quantity) {
+                    const newItem = {
+                        id: Math.random(),
+                        name: newUnexpectedItem.name,
+                        price: parseFloat(newUnexpectedItem.price) || 0,
+                        quantity: parseFloat(newUnexpectedItem.quantity) || 0,
+                        isUnexpected: true
+                    };
+                    
+                    setDailyItems(prev => [...prev, newItem]);
+                    setNewUnexpectedItem({ name: '', price: '', quantity: '' });
+                    addDebugMessage(`Added unexpected item: ${newItem.name}`, 'info');
+                }
+            };
+
+            const removeUnexpectedItem = (id) => {
+                setDailyItems(prev => prev.filter(item => !(item.id === id && item.isUnexpected)));
+            };
+
+            const addDailyEntry = () => {
+                const today = ISTUtils.getISTDate();
+                const timestamp = ISTUtils.getISTTimeString();
+                
+                const validItems = dailyItems.filter(item => 
+                    item.price && item.quantity && item.price > 0 && item.quantity > 0
+                );
+
+                if (validItems.length === 0) {
+                    alert("Please enter at least one item with price and quantity");
+                    return;
+                }
+
+                const itemsWithTotals = validItems.map(item => ({
+                    ...item,
+                    itemTotal: parseFloat(item.price) || 0
+                }));
+
+                const total = itemsWithTotals.reduce((sum, item) => sum + item.itemTotal, 0);
+
+                const entry = {
+                    date: today,
+                    timestamp: timestamp,
+                    materials: itemsWithTotals,
+                    total: total,
+                    submittedBy: currentUser.name,
+                    approvedBy: currentUser.role === 'approver' ? currentUser.name : null,
+                    status: currentUser.role === 'approver' ? 'approved' : 'pending',
+                    outlet: currentOutlet
+                };
+
+                addDebugMessage(`Adding new daily entry with ${validItems.length} items`, 'info');
+                
+                setIsLocalChange(true);
+                setDailyEntries(prev => [entry, ...prev]);
+                
+                const unexpectedItems = dailyItems.filter(item => item.isUnexpected);
+                resetDailyItems(currentOutlet);
+                setDailyItems(prev => [...prev.filter(item => !item.isUnexpected), ...unexpectedItems]);
+                
+                alert(`Daily entry saved for ${getOutletName(currentOutlet)}!`);
+            };
+
+            const addPastEntry = (selectedDate) => {
+                const timestamp = ISTUtils.getISTTimeString();
+                
+                const validItems = dailyItems.filter(item => 
+                    item.price && item.quantity && item.price > 0 && item.quantity > 0
+                );
+
+                if (validItems.length === 0) {
+                    alert("Please enter at least one item with price and quantity");
+                    return;
+                }
+
+                const itemsWithTotals = validItems.map(item => ({
+                    ...item,
+                    itemTotal: parseFloat(item.price) || 0
+                }));
+
+                const total = itemsWithTotals.reduce((sum, item) => sum + item.itemTotal, 0);
+
+                const entry = {
+                    date: selectedDate,
+                    timestamp: timestamp,
+                    materials: itemsWithTotals,
+                    total: total,
+                    submittedBy: currentUser.name,
+                    approvedBy: currentUser.role === 'approver' ? currentUser.name : null,
+                    status: currentUser.role === 'approver' ? 'approved' : 'pending',
+                    outlet: currentOutlet,
+                    isPastEntry: true
+                };
+
+                addDebugMessage(`Adding past entry for ${selectedDate} with ${validItems.length} items`, 'info');
+                
+                setIsLocalChange(true);
+                setDailyEntries(prev => [entry, ...prev]);
+                
+                const unexpectedItems = dailyItems.filter(item => item.isUnexpected);
+                resetDailyItems(currentOutlet);
+                setDailyItems(prev => [...prev.filter(item => !item.isUnexpected), ...unexpectedItems]);
+                
+                alert(`Past entry saved for ${getOutletName(currentOutlet)} on ${ISTUtils.formatISTDate(selectedDate)}!`);
+            };
+
+            const approveEntry = (entryIndex) => {
+                if (currentUser.role !== 'approver') return;
+                
+                addDebugMessage(`Approving entry at index ${entryIndex}`, 'info');
+                
+                setIsLocalChange(true);
+                setDailyEntries(prev => 
+                    prev.map((entry, index) => 
+                        index === entryIndex 
+                            ? { ...entry, approvedBy: currentUser.name, status: 'approved' }
+                            : entry
+                    )
+                );
+                
+                alert('Entry approved successfully!');
+            };
+
+            const getOutletName = (outlet) => {
+                return outlet === 'orange_grand' ? 'Orange Grand' : 'Orange Restaurant';
+            };
+
+            const todayTotal = dailyItems.reduce((sum, item) => {
+                const price = parseFloat(item.price) || 0;
+                return sum + price;
+            }, 0);
+
+            const todayEntries = dailyEntries.filter(entry => 
+                entry.date === ISTUtils.getISTDate()
+            );
+
+            const handleLogout = () => {
+                addDebugMessage('User logging out', 'info');
+                if (realtimeUnsubscribe) {
+                    realtimeUnsubscribe();
+                }
+                setCurrentUser(null);
+            };
+
+            const getSyncStatusMessage = () => {
+                switch (syncStatus) {
+                    case 'syncing':
+                        return { message: 'Syncing with server...', class: 'warning' };
+                    case 'success':
+                        return { 
+                            message: `Synced ${lastSync ? new Date(lastSync).toLocaleTimeString('en-IN', { timeZone: 'Asia/Kolkata' }) : ''}${isRealTimeActive ? ' (Live)' : ''}`, 
+                            class: 'success' 
+                        };
+                    case 'error':
+                        return { message: 'Sync failed. Using local data.', class: 'danger' };
+                    default:
+                        return { message: '', class: '' };
+                }
+            };
+
+            const syncStatusInfo = getSyncStatusMessage();
+
+            if (!currentUser) {
+                return <LoginPage onLogin={setCurrentUser} />;
+            }
+
+            return (
+                <div className="container-fluid">
+                    <div className="header text-center">
+                        <div className="user-badge">
+                            <span className="badge bg-light text-dark">
+                                <i className="bi bi-person-circle"></i> {currentUser.name}
+                            </span>
+                            <button className="btn btn-sm btn-outline-light ms-2" onClick={handleLogout}>
+                                <i className="bi bi-box-arrow-right"></i> Logout
+                            </button>
+                        </div>
+                        <h1><i className="bi bi-shop"></i> {getOutletName(currentOutlet)}</h1>
+                        <p className="lead">Expense Tracker</p>
+                        
+                        <div className="outlet-switcher">
+                            <div className="d-flex justify-content-center gap-3">
+                                <button 
+                                    className={`btn ${currentOutlet === 'orange_grand' ? 'btn-warning' : 'btn-outline-warning'}`}
+                                    onClick={() => switchOutlet('orange_grand')}
+                                >
+                                    Orange Grand
+                                </button>
+                                <button 
+                                    className={`btn ${currentOutlet === 'orange_restaurant' ? 'btn-warning' : 'btn-outline-warning'}`}
+                                    onClick={() => switchOutlet('orange_restaurant')}
+                                >
+                                    Orange Restaurant
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    
+                    <div className="row">
+                        <div className="col-md-3">
+                            <div className="card">
+                                <div className="card-header">
+                                    <h5 className="mb-0">Navigation</h5>
+                                </div>
+                                <div className="card-body">
+                                    <div className="list-group">
+                                        {(currentUser.role === 'data_entry' || currentUser.role === 'approver') && (
+                                            <button 
+                                                className={`list-group-item list-group-item-action ${activeTab === 'daily' ? 'active' : ''}`}
+                                                onClick={() => setActiveTab('daily')}
+                                            >
+                                                <i className="bi bi-journal-plus"></i> Daily Entry
+                                            </button>
+                                        )}
+                                        {(currentUser.role === 'data_entry' || currentUser.role === 'approver') && (
+                                            <button 
+                                                className={`list-group-item list-group-item-action ${activeTab === 'pastEntry' ? 'active' : ''}`}
+                                                onClick={() => setActiveTab('pastEntry')}
+                                            >
+                                                <i className="bi bi-calendar-check"></i> Past Entry
+                                            </button>
+                                        )}
+                                        <button 
+                                            className={`list-group-item list-group-item-action ${activeTab === 'reports' ? 'active' : ''}`}
+                                            onClick={() => setActiveTab('reports')}
+                                            >
+                                            <i className="bi bi-graph-up"></i> Reports
+                                        </button>
+                                        <button 
+                                            className={`list-group-item list-group-item-action ${activeTab === 'analysis' ? 'active' : ''}`}
+                                            onClick={() => setActiveTab('analysis')}
+                                        >
+                                            <i className="bi bi-pie-chart"></i> Analysis
+                                        </button>
+                                        {currentUser.role === 'approver' && (
+                                            <button 
+                                                className={`list-group-item list-group-item-action ${activeTab === 'approvals' ? 'active' : ''}`}
+                                                onClick={() => setActiveTab('approvals')}
+                                            >
+                                                <i className="bi bi-check-circle"></i> Approval Requests
+                                            </button>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                            
+                            <div className="card mt-4">
+                                <div className="card-header">
+                                    <h5 className="mb-0">Today's Summary - {getOutletName(currentOutlet)}</h5>
+                                </div>
+                                <div className="card-body">
+                                    <div className="text-center">
+                                        <h6>Today's Entries</h6>
+                                        <h4>{todayEntries.length}</h4>
+                                    </div>
+                                    <div className="text-center mt-3">
+                                        <h6>Today's Total</h6>
+                                        <h4>
+                                            <span className="rupee-icon">₹</span>
+                                            {todayEntries.reduce((sum, entry) => sum + entry.total, 0).toFixed(2)}
+                                        </h4>
+                                    </div>
+                                    {(currentUser.role === 'data_entry' || currentUser.role === 'approver') && (
+                                        <div className="text-center mt-3">
+                                            <h6>Current Entry</h6>
+                                            <h4>
+                                                <span className="rupee-icon">₹</span>
+                                                {todayTotal.toFixed(2)}
+                                            </h4>
+                                        </div>
+                                    )}
+                                    <div className="text-center mt-3">
+                                        <small className="text-muted">IST: {ISTUtils.getCurrentISTDisplay()}</small>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {currentUser.role === 'approver' && (
+                                <div className="card mt-4">
+                                    <div className="card-header">
+                                        <h5 className="mb-0">Pending Approvals</h5>
+                                    </div>
+                                    <div className="card-body">
+                                        <div className="text-center">
+                                            <h6>Orange Grand</h6>
+                                            <h4 className="text-warning">
+                                                {outletData.orange_grand.filter(entry => entry.status === 'pending').length}
+                                            </h4>
+                                        </div>
+                                        <div className="text-center mt-3">
+                                            <h6>Orange Restaurant</h6>
+                                            <h4 className="text-warning">
+                                                {outletData.orange_restaurant.filter(entry => entry.status === 'pending').length}
+                                            </h4>
+                                        </div>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                        
+                        <div className="col-md-9">
+                            {activeTab === 'daily' && (currentUser.role === 'data_entry' || currentUser.role === 'approver') && (
+                                <div className="card">
+                                    <div className="card-header">
+                                        <h5 className="mb-0">Daily Expense Entry - {getOutletName(currentOutlet)}</h5>
+                                    </div>
+                                    <div className="card-body">
+                                        <div className="alert alert-info">
+                                            <i className="bi bi-info-circle"></i> Enter prices and quantities for today's expenses
+                                            {firebaseStatus !== 'connected' && (
+                                                <div className="mt-2 alert alert-warning">
+                                                    <i className="bi bi-exclamation-triangle"></i> Offline mode - data will be stored locally only
+                                                </div>
+                                            )}
+                                        </div>
+                                        
+                                        <div className="row mb-4">
+                                            <div className="col-md-12">
+                                                <h6>Date: {ISTUtils.getCurrentISTDisplay()}</h6>
+                                                <p className="text-muted">Submitted by: {currentUser.name} | Time: {ISTUtils.getISTTimeString()}</p>
+                                            </div>
+                                        </div>
+
+                                        <h6>Regular Items</h6>
+                                        
+                                        {currentOutlet === 'orange_grand' ? (
+                                            <OrangeGrandAccordion 
+                                                dailyItems={dailyItems}
+                                                updateItemField={updateItemField}
+                                                removeUnexpectedItem={removeUnexpectedItem}
+                                            />
+                                        ) : (
+                                            <OrangeRestaurantAccordion 
+                                                dailyItems={dailyItems}
+                                                updateItemField={updateItemField}
+                                                removeUnexpectedItem={removeUnexpectedItem}
+                                            />
+                                        )}
+
+                                        <h6>Unexpected Items</h6>
+                                        <div className="table-responsive mb-4">
+                                            <table className="table table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Item</th>
+                                                        <th width="150">Quantity</th>
+                                                        <th width="200">Total Price (₹)</th>
+                                                        <th width="80">Action</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {dailyItems.filter(item => item.isUnexpected).map(item => (
+                                                        <tr key={item.id}>
+                                                            <td>{item.name}</td>
+                                                            <td>
+                                                                <input 
+                                                                    type="text" 
+                                                                    className="form-control" 
+                                                                    value={item.quantity} 
+                                                                    onChange={(e) => updateItemField(item.id, 'quantity', e.target.value)}
+                                                                    placeholder="Qty"
+                                                                    required
+                                                                />
+                                                            </td>
+                                                            <td>
+                                                                <div className="input-group">
+                                                                    <span className="input-group-text">₹</span>
+                                                                    <input 
+                                                                        type="text" 
+                                                                        className="form-control" 
+                                                                        value={item.price} 
+                                                                        onChange={(e) => {
+                                                                            const value = e.target.value;
+                                                                            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                                                                updateItemField(item.id, 'price', value);
+                                                                            }
+                                                                        }}
+                                                                        placeholder="Total Price"
+                                                                        pattern="[0-9.]*"
+                                                                        inputMode="decimal"
+                                                                        required
+                                                                    />
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <button 
+                                                                    className="btn btn-sm btn-outline-danger"
+                                                                    onClick={() => removeUnexpectedItem(item.id)}
+                                                                >
+                                                                    <i className="bi bi-trash"></i>
+                                                                </button>
+                                                            </td>
+                                                        </tr>
+                                                    ))}
+                                                    <tr>
+                                                        <td>
+                                                            <input 
+                                                                type="text" 
+                                                                className="form-control" 
+                                                                placeholder="New item name"
+                                                                value={newUnexpectedItem.name}
+                                                                onChange={(e) => setNewUnexpectedItem({...newUnexpectedItem, name: e.target.value})}
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            <input 
+                                                                type="text" 
+                                                                className="form-control" 
+                                                                placeholder="Qty"
+                                                                value={newUnexpectedItem.quantity}
+                                                                onChange={(e) => setNewUnexpectedItem({...newUnexpectedItem, quantity: e.target.value})}
+                                                                required
+                                                            />
+                                                        </td>
+                                                        <td>
+                                                            <div className="input-group">
+                                                                <span className="input-group-text">₹</span>
+                                                                <input 
+                                                                    type="text" 
+                                                                    className="form-control" 
+                                                                    placeholder="Total Price"
+                                                                    value={newUnexpectedItem.price}
+                                                                    onChange={(e) => {
+                                                                        const value = e.target.value;
+                                                                        if (value === '' || /^\d*\.?\d*$/.test(value)) {
+                                                                            setNewUnexpectedItem({...newUnexpectedItem, price: value});
+                                                                        }
+                                                                    }}
+                                                                    pattern="[0-9.]*"
+                                                                    inputMode="decimal"
+                                                                    required
+                                                                />
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <button 
+                                                                className="btn btn-primary btn-sm"
+                                                                onClick={addUnexpectedItem}
+                                                            >
+                                                                <i className="bi bi-plus"></i> Add
+                                                            </button>
+                                                        </td>
+                                                    </tr>
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        
+                                        <div className="d-flex justify-content-between align-items-center mb-4 p-3 bg-light rounded">
+                                            <h5 className="mb-0">Current Total: <span className="text-success">₹{todayTotal.toFixed(2)}</span></h5>
+                                            <button className="btn btn-primary btn-lg" onClick={addDailyEntry}>
+                                                <i className="bi bi-save"></i> Save Daily Entry
+                                            </button>
+                                        </div>
+
+                                        {todayEntries.length > 0 && (
+                                            <div className="mt-4">
+                                                <h6>Today's Saved Entries - {getOutletName(currentOutlet)}</h6>
+                                                <div className="table-responsive">
+                                                    <table className="table table-sm table-hover">
+                                                        <thead>
+                                                            <tr>
+                                                                <th>Time (IST)</th>
+                                                                <th>Submitted By</th>
+                                                                <th>Status</th>
+                                                                <th>Items</th>
+                                                                <th>Total</th>
+                                                                {currentUser.role === 'approver' && <th>Action</th>}
+                                                            </tr>
+                                                        </thead>
+                                                        <tbody>
+                                                            {todayEntries.map((entry, index) => (
+                                                                <tr key={index}>
+                                                                    <td>{entry.timestamp}</td>
+                                                                    <td>{entry.submittedBy}</td>
+                                                                    <td>
+                                                                        <span className={`entry-status ${entry.status === 'approved' ? 'status-approved' : 'status-pending'}`}>
+                                                                            {entry.status === 'approved' ? 
+                                                                                `Approved by ${entry.approvedBy}` : 
+                                                                                'Pending Approval'}
+                                                                        </span>
+                                                                    </td>
+                                                                    <td>{entry.materials.length} items</td>
+                                                                    <td>
+                                                                        <strong>₹{entry.total.toFixed(2)}</strong>
+                                                                    </td>
+                                                                    {currentUser.role === 'approver' && entry.status !== 'approved' && (
+                                                                        <td>
+                                                                            <button 
+                                                                                className="btn btn-success btn-sm"
+                                                                                onClick={() => approveEntry(index)}
+                                                                            >
+                                                                                <i className="bi bi-check-lg"></i> Approve
+                                                                            </button>
+                                                                        </td>
+                                                                    )}
+                                                                </tr>
+                                                            ))}
+                                                        </tbody>
+                                                    </table>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {activeTab === 'pastEntry' && (currentUser.role === 'data_entry' || currentUser.role === 'approver') && (
+                                <PastEntryTab 
+                                    currentOutlet={currentOutlet}
+                                    getOutletName={getOutletName}
+                                    currentUser={currentUser}
+                                    dailyItems={dailyItems}
+                                    updateItemField={updateItemField}
+                                    addUnexpectedItem={addUnexpectedItem}
+                                    removeUnexpectedItem={removeUnexpectedItem}
+                                    newUnexpectedItem={newUnexpectedItem}
+                                    setNewUnexpectedItem={setNewUnexpectedItem}
+                                    todayTotal={todayTotal}
+                                    addPastEntry={addPastEntry}
+                                />
+                            )}
+                            
+                            {activeTab === 'reports' && (
+                                <ReportsTab 
+                                    dailyEntries={dailyEntries}
+                                    currentOutlet={currentOutlet}
+                                    getOutletName={getOutletName}
+                                    currentUser={currentUser}
+                                    isRealTimeActive={isRealTimeActive}
+                                    firebaseStatus={firebaseStatus}
+                                />
+                            )}
+                            
+                            {activeTab === 'analysis' && (
+                                <AnalysisTab 
+                                    dailyEntries={dailyEntries}
+                                    currentOutlet={currentOutlet}
+                                    getOutletName={getOutletName}
+                                    isRealTimeActive={isRealTimeActive}
+                                    firebaseStatus={firebaseStatus}
+                                />
+                            )}
+
+                            {activeTab === 'approvals' && currentUser.role === 'approver' && (
+                                <ApprovalsTab 
+                                    outletData={outletData}
+                                    getOutletName={getOutletName}
+                                    currentUser={currentUser}
+                                    onOutletSwitch={switchOutlet}
+                                    onApproveEntry={(outlet, entryIndex) => {
+                                        if (outlet === currentOutlet) {
+                                            approveEntry(entryIndex);
+                                        } else {
+                                            switchOutlet(outlet);
+                                            setTimeout(() => {
+                                                approveEntry(entryIndex);
+                                            }, 500);
+                                        }
+                                    }}
+                                />
+                            )}
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const PdfPreviewModal = ({ show, onClose, pdfContent, onDownload }) => {
+            if (!show) return null;
+
+            return (
+                <div className="modal fade show d-block pdf-preview-modal" tabIndex="-1" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+                    <div className="modal-dialog modal-xl">
+                        <div className="modal-content">
+                            <div className="modal-header">
+                                <h5 className="modal-title">PDF Preview</h5>
+                                <button type="button" className="btn-close" onClick={onClose}></button>
+                            </div>
+                            <div className="modal-body">
+                                <div className="mobile-optimized-table">
+                                    <div dangerouslySetInnerHTML={{ __html: pdfContent }} />
+                                </div>
+                            </div>
+                            <div className="modal-footer">
+                                <button type="button" className="btn btn-secondary" onClick={onClose}>
+                                    Close
+                                </button>
+                                <button type="button" className="btn btn-success" onClick={onDownload}>
+                                    <i className="bi bi-download"></i> Download PDF
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            );
+        };
+
+        const ApprovalsTab = ({ outletData, getOutletName, currentUser, onOutletSwitch, onApproveEntry }) => {
+            const [selectedOutlet, setSelectedOutlet] = useState('orange_grand');
+            const [previewEntry, setPreviewEntry] = useState(null);
+            const [showPreview, setShowPreview] = useState(false);
+
+            const getPendingEntries = (outlet) => {
+                return outletData[outlet].filter(entry => entry.status === 'pending');
+            };
+
+            const handleApprove = (outlet, entryIndex) => {
+                onApproveEntry(outlet, entryIndex);
+            };
+
+            const handlePreview = (entry) => {
+                setPreviewEntry(entry);
+                setShowPreview(true);
+            };
+
+            const closePreview = () => {
+                setShowPreview(false);
+                setPreviewEntry(null);
+            };
+
+            const pendingGrand = getPendingEntries('orange_grand');
+            const pendingRestaurant = getPendingEntries('orange_restaurant');
+
+            return (
+                <div className="card">
+                    <div className="card-header">
+                        <h5 className="mb-0">Approval Requests</h5>
+                    </div>
+                    <div className="card-body">
+                        <div className="alert alert-info">
+                            <i className="bi bi-info-circle"></i> Manage pending approval requests separately for each outlet
+                        </div>
+
+                        <div className="row mb-4">
+                            <div className="col-md-6">
+                                <select 
+                                    className="form-select"
+                                    value={selectedOutlet}
+                                    onChange={(e) => setSelectedOutlet(e.target.value)}
+                                >
+                                    <option value="orange_grand">Orange Grand</option>
+                                    <option value="orange_restaurant">Orange Restaurant</option>
+                                </select>
+                            </div>
+                            <div className="col-md-6">
+                                <div className="d-flex gap-2">
+                                    <span className="badge bg-warning">
+                                        Orange Grand: {pendingGrand.length} pending
+                                    </span>
+                                    <span className="badge bg-warning">
+                                        Orange Restaurant: {pendingRestaurant.length} pending
+                                    </span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="approval-section">
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <h5>
+                                    <i className="bi bi-shop"></i> Orange Grand
+                                    <span className="outlet-specific-badge ms-2">
+                                        {pendingGrand.length} Pending
+                                    </span>
+                                </h5>
+                                <button 
+                                    className="btn btn-outline-primary btn-sm"
+                                    onClick={() => onOutletSwitch('orange_grand')}
+                                >
+                                    <i className="bi bi-arrow-right"></i> Go to Orange Grand
+                                </button>
+                            </div>
+                            
+                            {pendingGrand.length > 0 ? (
+                                <div className="table-responsive">
+                                    <table className="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Time (IST)</th>
+                                                <th>Submitted By</th>
+                                                <th>Items</th>
+                                                <th>Total</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {pendingGrand.map((entry, index) => (
+                                                <tr key={index}>
+                                                    <td>{ISTUtils.formatISTDate(entry.date)}</td>
+                                                    <td>{entry.timestamp}</td>
+                                                    <td>{entry.submittedBy}</td>
+                                                    <td>{entry.materials.length} items</td>
+                                                    <td><strong>₹{entry.total.toFixed(2)}</strong></td>
+                                                    <td>
+                                                        <div className="btn-group btn-group-sm">
+                                                            <button 
+                                                                className="btn btn-info"
+                                                                onClick={() => handlePreview(entry)}
+                                                                title="Preview Entry"
+                                                            >
+                                                                <i className="bi bi-eye"></i> Preview
+                                                            </button>
+                                                            <button 
+                                                                className="btn btn-success"
+                                                                onClick={() => handleApprove('orange_grand', index)}
+                                                                title="Approve Entry"
+                                                            >
+                                                                <i className="bi bi-check-lg"></i> Approve
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="text-center py-4 text-muted">
+                                    <i className="bi bi-check-circle display-4"></i>
+                                    <p className="mt-2">No pending approvals for Orange Grand</p>
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="approval-section mt-4">
+                            <div className="d-flex justify-content-between align-items-center mb-3">
+                                <h5>
+                                    <i className="bi bi-cup-straw"></i> Orange Restaurant
+                                    <span className="outlet-specific-badge ms-2">
+                                        {pendingRestaurant.length} Pending
+                                    </span>
+                                </h5>
+                                <button 
+                                    className="btn btn-outline-primary btn-sm"
+                                    onClick={() => onOutletSwitch('orange_restaurant')}
+                                >
+                                    <i className="bi bi-arrow-right"></i> Go to Orange Restaurant
+                                </button>
+                            </div>
+                            
+                            {pendingRestaurant.length > 0 ? (
+                                <div className="table-responsive">
+                                    <table className="table table-sm table-hover">
+                                        <thead>
+                                            <tr>
+                                                <th>Date</th>
+                                                <th>Time (IST)</th>
+                                                <th>Submitted By</th>
+                                                <th>Items</th>
+                                                <th>Total</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {pendingRestaurant.map((entry, index) => (
+                                                <tr key={index}>
+                                                    <td>{ISTUtils.formatISTDate(entry.date)}</td>
+                                                    <td>{entry.timestamp}</td>
+                                                    <td>{entry.submittedBy}</td>
+                                                    <td>{entry.materials.length} items</td>
+                                                    <td><strong>₹{entry.total.toFixed(2)}</strong></td>
+                                                    <td>
+                                                        <div className="btn-group btn-group-sm">
+                                                            <button 
+                                                                className="btn btn-info"
+                                                                onClick={() => handlePreview(entry)}
+                                                                title="Preview Entry"
+                                                            >
+                                                                <i className="bi bi-eye"></i> Preview
+                                                            </button>
+                                                            <button 
+                                                                className="btn btn-success"
+                                                                onClick={() => handleApprove('orange_restaurant', index)}
+                                                                title="Approve Entry"
+                                                            >
+                                                                <i className="bi bi-check-lg"></i> Approve
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            ) : (
+                                <div className="text-center py-4 text-muted">
+                                    <i className="bi bi-check-circle display-4"></i>
+                                    <p className="mt-2">No pending approvals for Orange Restaurant</p>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {showPreview && previewEntry && (
+                        <div className="modal fade show d-block" tabIndex="-1" style={{backgroundColor: 'rgba(0,0,0,0.5)'}}>
+                            <div className="modal-dialog modal-lg">
+                                <div className="modal-content">
+                                    <div className="modal-header">
+                                        <h5 className="modal-title">
+                                            <i className="bi bi-eye"></i> Entry Preview - {ISTUtils.formatISTDate(previewEntry.date)}
+                                        </h5>
+                                        <button type="button" className="btn-close" onClick={closePreview}></button>
+                                    </div>
+                                    <div className="modal-body">
+                                        <div className="row mb-3">
+                                            <div className="col-md-6">
+                                                <strong>Date:</strong> {ISTUtils.formatISTDate(previewEntry.date)}
+                                            </div>
+                                            <div className="col-md-6">
+                                                <strong>Time (IST):</strong> {previewEntry.timestamp}
+                                            </div>
+                                        </div>
+                                        <div className="row mb-3">
+                                            <div className="col-md-6">
+                                                <strong>Submitted By:</strong> {previewEntry.submittedBy}
+                                            </div>
+                                            <div className="col-md-6">
+                                                <strong>Status:</strong> 
+                                                <span className={`badge ${previewEntry.status === 'approved' ? 'bg-success' : 'bg-warning'} ms-2`}>
+                                                    {previewEntry.status}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        
+                                        <h6>Items:</h6>
+                                        <div className="table-responsive">
+                                            <table className="table table-sm table-striped">
+                                                <thead>
+                                                    <tr>
+                                                        <th>Item Name</th>
+                                                        <th>Category</th>
+                                                        <th>Quantity</th>
+                                                        <th>Price (₹)</th>
+                                                        <th>Total (₹)</th>
+                                                    </tr>
+                                                </thead>
+                                                <tbody>
+                                                    {previewEntry.materials.map((item, idx) => (
+                                                        <tr key={idx}>
+                                                            <td>{item.name}</td>
+                                                            <td>{item.category || 'Unexpected'}</td>
+                                                            <td>{item.quantity}</td>
+                                                            <td>₹{item.price}</td>
+                                                            <td><strong>₹{item.itemTotal?.toFixed(2) || item.price}</strong></td>
+                                                        </tr>
+                                                    ))}
+                                                </tbody>
+                                            </table>
+                                        </div>
+                                        
+                                        <div className="d-flex justify-content-end mt-3 p-3 bg-light rounded">
+                                            <h5 className="mb-0">
+                                                Total Amount: <span className="text-success">₹{previewEntry.total.toFixed(2)}</span>
+                                            </h5>
+                                        </div>
+                                    </div>
+                                    <div className="modal-footer">
+                                        <button type="button" className="btn btn-secondary" onClick={closePreview}>
+                                            Close
+                                        </button>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    )}
+                </div>
+            );
+        };
+
+        const ReportsTab = ({ dailyEntries, currentOutlet, getOutletName, currentUser, isRealTimeActive, firebaseStatus }) => {
+            const [reportType, setReportType] = useState('today');
+            const [customStartDate, setCustomStartDate] = useState('');
+            const [customEndDate, setCustomEndDate] = useState('');
+            const [itemSearch, setItemSearch] = useState('');
+            const [searchResults, setSearchResults] = useState([]);
+            const [showPdfPreview, setShowPdfPreview] = useState(false);
+            const [pdfContent, setPdfContent] = useState('');
+
+            useEffect(() => {
+                if (reportType === 'custom') {
+                    const today = ISTUtils.getISTDate();
+                    const oneWeekAgo = new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+                    const oneWeekAgoIST = new Date(oneWeekAgo.getTime() + (5.5 * 60 * 60 * 1000)).toISOString().split('T')[0];
+                    
+                    if (!customStartDate) {
+                        setCustomStartDate(oneWeekAgoIST);
+                    }
+                    if (!customEndDate) {
+                        setCustomEndDate(today);
+                    }
+                }
+            }, [reportType, customStartDate, customEndDate]);
+
+            const getFilteredEntries = () => {
+                const todayIST = ISTUtils.getISTDate();
+                
+                switch (reportType) {
+                    case 'today':
+                        return dailyEntries.filter(entry => entry.date === todayIST);
+                    case 'week':
+                        const oneWeekAgo = new Date(new Date().getTime() - 7 * 24 * 60 * 60 * 1000);
+                        const oneWeekAgoIST = new Date(oneWeekAgo.getTime() + (5.5 * 60 * 60 * 1000)).toISOString().split('T')[0];
+                        return dailyEntries.filter(entry => {
+                            return entry.date >= oneWeekAgoIST && entry.date <= todayIST;
+                        });
+                    case 'month':
+                        const now = new Date();
+                        const firstDayOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+                        const firstDayOfMonthIST = new Date(firstDayOfMonth.getTime() + (5.5 * 60 * 60 * 1000)).toISOString().split('T')[0];
+                        return dailyEntries.filter(entry => {
+                            return entry.date >= firstDayOfMonthIST && entry.date <= todayIST;
+                        });
+                    case 'custom':
+                        if (!customStartDate || !customEndDate) {
+                            return [];
+                        }
+                        return dailyEntries.filter(entry => {
+                            return entry.date >= customStartDate && entry.date <= customEndDate;
+                        });
+                    default:
+                        return dailyEntries;
+                }
+            };
+
+            const searchItem = () => {
+                if (!itemSearch.trim()) {
+                    setSearchResults([]);
+                    return;
+                }
+
+                const results = [];
+                dailyEntries.forEach(entry => {
+                    entry.materials.forEach(material => {
+                        if (material.name.toLowerCase().includes(itemSearch.toLowerCase())) {
+                            results.push({
+                                date: entry.date,
+                                name: material.name,
+                                quantity: material.quantity,
+                                price: material.price,
+                                total: material.itemTotal,
+                                submittedBy: entry.submittedBy,
+                                approvedBy: entry.approvedBy,
+                                outlet: entry.outlet
+                            });
+                        }
+                    });
+                });
+
+                setSearchResults(results);
+            };
+
+            const generatePdfContent = () => {
+                const filteredEntries = getFilteredEntries();
+                
+                const totalAmount = filteredEntries.reduce((sum, entry) => sum + entry.total, 0);
+                const totalItems = filteredEntries.reduce((sum, entry) => sum + entry.materials.length, 0);
+                
+                const allItems = [];
+                filteredEntries.forEach(entry => {
+                    entry.materials.forEach(material => {
+                        allItems.push({
+                            date: entry.date,
+                            name: material.name,
+                            quantity: material.quantity,
+                            price: material.price,
+                            total: material.itemTotal,
+                            submittedBy: entry.submittedBy
+                        });
+                    });
+                });
+
+                return `
+                    <div class="report-pdf-content">
+                        <div class="report-header">
+                            <div class="report-title">${getOutletName(currentOutlet)}</div>
+                            <div class="report-subtitle">${getReportPeriodText()} Expense Report</div>
+                            ${reportType === 'custom' ? `<div>Period: ${ISTUtils.formatISTDate(customStartDate)} to ${ISTUtils.formatISTDate(customEndDate)}</div>` : ''}
+                            <div>Generated on: ${ISTUtils.getCurrentISTDisplay()}</div>
+                            <div>Generated at: ${ISTUtils.getISTTimeString()} IST</div>
+                            <div>Generated by: ${currentUser.name}</div>
+                            <div>Data Source: ${firebaseStatus === 'connected' ? 'Firebase (Live)' : 'Local Storage'}</div>
+                        </div>
+                        
+                        <div class="report-summary">
+                            <div class="summary-item">
+                                <div class="summary-value">₹${totalAmount.toFixed(2)}</div>
+                                <div class="summary-label">Total Amount</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-value">${filteredEntries.length}</div>
+                                <div class="summary-label">Number of Entries</div>
+                            </div>
+                            <div class="summary-item">
+                                <div class="summary-value">${totalItems}</div>
+                                <div class="summary-label">Total Items</div>
+                            </div>
+                        </div>
+
+                        <h3>Expense Details</h3>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Time (IST)</th>
+                                    <th>Submitted By</th>
+                                    <th>Approved By</th>
+                                    <th>Items</th>
+                                    <th>Total Amount</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${filteredEntries.map(entry => `
+                                    <tr>
+                                        <td>${ISTUtils.formatISTDate(entry.date)}</td>
+                                        <td>${entry.timestamp}</td>
+                                        <td>${entry.submittedBy}</td>
+                                        <td>${entry.approvedBy || 'Pending'}</td>
+                                        <td>${entry.materials.length} items</td>
+                                        <td class="total-amount">₹${entry.total.toFixed(2)}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+
+                        <h3>Item-wise Breakdown</h3>
+                        <table class="report-table">
+                            <thead>
+                                <tr>
+                                    <th>Date</th>
+                                    <th>Item Name</th>
+                                    <th>Quantity</th>
+                                    <th>Price</th>
+                                    <th>Total</th>
+                                    <th>Submitted By</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                ${allItems.map(item => `
+                                    <tr>
+                                        <td>${ISTUtils.formatISTDate(item.date)}</td>
+                                        <td>${item.name}</td>
+                                        <td>${item.quantity}</td>
+                                        <td>₹${item.price}</td>
+                                        <td class="total-amount">₹${item.total.toFixed(2)}</td>
+                                        <td>${item.submittedBy}</td>
+                                    </tr>
+                                `).join('')}
+                            </tbody>
+                        </table>
+                    </div>
+                `;
+            };
+
+            const previewReport = () => {
+                if (reportType === 'custom' && (!customStartDate || !customEndDate)) {
+                    alert("Please select both start and end dates for custom period");
+                    return;
+                }
+                
+                const content = generatePdfContent();
+                setPdfContent(content);
+                setShowPdfPreview(true);
+            };
+
+            const downloadReport = () => {
+                if (reportType === 'custom' && (!customStartDate || !customEndDate)) {
+                    alert("Please select both start and end dates for custom period");
+                    return;
+                }
+                
+                const content = generatePdfContent();
+                
+                const element = document.createElement('div');
+                element.innerHTML = content;
+                
+                const opt = {
+                    margin: 5,
+                    filename: `${getOutletName(currentOutlet).replace(' ', '_')}_${getReportPeriodText().toLowerCase()}_report_${ISTUtils.getISTDate()}.pdf`,
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { 
+                        scale: 2,
+                        useCORS: true,
+                        scrollY: 0
+                    },
+                    jsPDF: { 
+                        unit: 'mm', 
+                        format: 'a4', 
+                        orientation: 'portrait' 
+                    }
+                };
+
+                html2pdf().set(opt).from(element).save();
+            };
+
+            const getReportPeriodText = () => {
+                switch (reportType) {
+                    case 'today': return 'Today';
+                    case 'week': return 'Weekly';
+                    case 'month': return 'Monthly';
+                    case 'custom': return 'Custom';
+                    default: return 'Report';
+                }
+            };
+
+            const filteredEntries = getFilteredEntries();
+            
+            return (
+                <>
+                    <div className="card">
+                        <div className="card-header d-flex justify-content-between align-items-center">
+                            <h5 className="mb-0">Expense Reports - {getOutletName(currentOutlet)}</h5>
+                            <div>
+                                {firebaseStatus === 'connected' ? (
+                                    <span className="badge bg-success real-time-badge">
+                                        <i className="bi bi-circle-fill"></i> {isRealTimeActive ? 'Live Data' : 'Firebase Connected'}
+                                    </span>
+                                ) : (
+                                    <span className="badge bg-warning">
+                                        <i className="bi bi-exclamation-triangle"></i> Local Data Only
+                                    </span>
+                                )}
+                            </div>
+                        </div>
+                        <div className="card-body">
+                            <div className="alert alert-info">
+                                <i className="bi bi-info-circle"></i> 
+                                {firebaseStatus === 'connected' 
+                                    ? 'Data is synced with Firebase cloud database'
+                                    : 'Working in offline mode - data stored locally only'}
+                                <br />
+                                <strong>Note:</strong> All timestamps are in Indian Standard Time (IST)
+                            </div>
+                            
+                            <div className="download-options">
+                                <div className="row mb-3">
+                                    <div className="col-md-6">
+                                        <label className="form-label">Report Period</label>
+                                        <select 
+                                            className="form-select"
+                                            value={reportType}
+                                            onChange={(e) => setReportType(e.target.value)}
+                                        >
+                                            <option value="today">Today</option>
+                                            <option value="week">This Week</option>
+                                            <option value="month">This Month</option>
+                                            <option value="custom">Custom Period</option>
+                                        </select>
+                                    </div>
+                                    <div className="col-md-6">
+                                        <label className="form-label">PDF Options</label>
+                                        <div className="d-grid gap-2 d-md-flex">
+                                            <button className="btn btn-info me-md-2 w-100" onClick={previewReport}>
+                                                <i className="bi bi-eye"></i> Preview PDF
+                                            </button>
+                                            <button className="btn btn-success w-100" onClick={downloadReport}>
+                                                <i className="bi bi-download"></i> Download PDF
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {reportType === 'custom' && (
+                                    <div className="custom-period-selector">
+                                        <div className="row">
+                                            <div className="col-md-6">
+                                                <label className="form-label">Start Date</label>
+                                                <input 
+                                                    type="date" 
+                                                    className="form-control"
+                                                    value={customStartDate}
+                                                    onChange={(e) => setCustomStartDate(e.target.value)}
+                                                    max={ISTUtils.getISTDate()}
+                                                />
+                                            </div>
+                                            <div className="col-md-6">
+                                                <label className="form-label">End Date</label>
+                                                <input 
+                                                    type="date" 
+                                                    className="form-control"
+                                                    value={customEndDate}
+                                                    onChange={(e) => setCustomEndDate(e.target.value)}
+                                                    max={ISTUtils.getISTDate()}
+                                                    min={customStartDate}
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                                
+                                <div className="row mt-3">
+                                    <div className="col-12">
+                                        <div className="input-group">
+                                            <input 
+                                                type="text" 
+                                                className="form-control" 
+                                                placeholder="Search item..."
+                                                value={itemSearch}
+                                                onChange={(e) => setItemSearch(e.target.value)}
+                                            />
+                                            <button className="btn btn-primary" onClick={searchItem}>
+                                                <i className="bi bi-search"></i> Search
+                                            </button>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="table-responsive">
+                                <table className="table table-striped">
+                                    <thead>
+                                        <tr>
+                                            <th>Date</th>
+                                            <th>Time (IST)</th>
+                                            <th>Submitted By</th>
+                                            <th>Approved By</th>
+                                            <th>Items</th>
+                                            <th>Total Amount</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {filteredEntries.length > 0 ? (
+                                            filteredEntries.map((entry, index) => (
+                                                <tr key={index}>
+                                                    <td>{ISTUtils.formatISTDate(entry.date)}</td>
+                                                    <td>{entry.timestamp}</td>
+                                                    <td>{entry.submittedBy}</td>
+                                                    <td>{entry.approvedBy || 'Pending'}</td>
+                                                    <td>{entry.materials.length} items</td>
+                                                    <td><strong>₹{entry.total.toFixed(2)}</strong></td>
+                                                </tr>
+                                            ))
+                                        ) : (
+                                            <tr>
+                                                <td colSpan="6" className="text-center py-4">
+                                                    No expenses found for the selected period. 
+                                                    {reportType === 'custom' && ' Please check your custom date range.'}
+                                                    {firebaseStatus !== 'connected' && ' Firebase connection may be required.'}
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            {searchResults.length > 0 && (
+                                <div className="mt-4">
+                                    <h5>Search Results for "{itemSearch}"</h5>
+                                    <div className="table-responsive">
+                                        <table className="table table-sm table-hover">
+                                            <thead>
+                                                <tr>
+                                                    <th>Date</th>
+                                                    <th>Item Name</th>
+                                                    <th>Quantity</th>
+                                                    <th>Price</th>
+                                                    <th>Total</th>
+                                                    <th>Submitted By</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {searchResults.map((result, index) => (
+                                                    <tr key={index}>
+                                                        <td>{ISTUtils.formatISTDate(result.date)}</td>
+                                                        <td>{result.name}</td>
+                                                        <td>{result.quantity}</td>
+                                                        <td>₹{result.price}</td>
+                                                        <td><strong>₹{result.total.toFixed(2)}</strong></td>
+                                                        <td>{result.submittedBy}</td>
+                                                    </tr>
+                                                ))}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    <PdfPreviewModal 
+                        show={showPdfPreview}
+                        onClose={() => setShowPdfPreview(false)}
+                        pdfContent={pdfContent}
+                        onDownload={downloadReport}
+                    />
+                </>
+            );
+        };
+
+        const root = ReactDOM.createRoot(document.getElementById('root'));
+        root.render(<App />);
+    </script>
+</body>
+</html>
